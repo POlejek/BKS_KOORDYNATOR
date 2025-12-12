@@ -122,8 +122,12 @@ function PlanSzkoleniowy() {
   };
 
   const handleOpenDialog = (plan = null) => {
-    if (plan) {
-      setEditingPlan(plan);
+    if (plan) {      // Jeśli to mecz, nie pozwalaj edytować tutaj
+      if (plan.typWydarzenia === 'mecz') {
+        alert('Mecze można edytować tylko w zakładce "Kontrola Meczowa"');
+        return;
+      }
+            setEditingPlan(plan);
       setFormData({
         dataTreningu: plan.dataTreningu ? format(new Date(plan.dataTreningu), 'yyyy-MM-dd') : '',
         typWydarzenia: plan.typWydarzenia || 'trening',
@@ -312,7 +316,7 @@ function PlanSzkoleniowy() {
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
             >
-              Dodaj Trening/Mecz
+              + Dodaj Trening
             </Button>
           )}
         </Box>
@@ -460,7 +464,7 @@ function PlanSzkoleniowy() {
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingPlan ? 'Edytuj plan szkoleniowy' : 'Dodaj Trening/Mecz'}
+          {editingPlan ? 'Edytuj plan szkoleniowy' : '+ Dodaj Trening'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
