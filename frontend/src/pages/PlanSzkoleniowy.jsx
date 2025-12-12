@@ -294,7 +294,7 @@ function PlanSzkoleniowy() {
               startIcon={<AddIcon />}
               onClick={() => handleOpenDialog()}
             >
-              Dodaj plan
+              Dodaj Trening/Mecz
             </Button>
           )}
         </Box>
@@ -442,7 +442,7 @@ function PlanSzkoleniowy() {
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingPlan ? 'Edytuj plan szkoleniowy' : 'Dodaj plan szkoleniowy'}
+          {editingPlan ? 'Edytuj plan szkoleniowy' : 'Dodaj Trening/Mecz'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>

@@ -26,7 +26,7 @@ import {
 import { Add as AddIcon, Delete as DeleteIcon, Save as SaveIcon } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { zawodnicyService, druzynyService, kontroleMeczoweService } from '../services';
+import { zawodnicyService, druzynyService, kontroleMeczoweService, planySzkolenioweService } from '../services';
 
 function KontrolaMeczowaPage() {
   const [kontrole, setKontrole] = useState([]);
@@ -67,12 +67,51 @@ function KontrolaMeczowaPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [zawodnicyRes, kontroleRes] = await Promise.all([
+      const [zawodnicyRes, kontroleRes, planyRes] = await Promise.all([
         zawodnicyService.getByDruzyna(selectedDruzyna),
-        kontroleMeczoweService.getAll(selectedDruzyna)
+        kontroleMeczoweService.getAll(selectedDruzyna),
+        planySzkolenioweService.getByDruzyna(selectedDruzyna)
       ]);
+      
       setZawodnicy(zawodnicyRes.data);
-      setKontrole(kontroleRes.data);
+      
+      // Znajdź mecze z planów treningowych (typWydarzenia === 'mecz')
+      const meczeZPlanow = planyRes.data.filter(plan => plan.typWydarzenia === 'mecz');
+      const istniejaceKontrole = kontroleRes.data;
+      
+      // Automatycznie twórz kontrole meczowe dla meczów, które nie mają jeszcze kontroli
+      for (const mecz of meczeZPlanow) {
+        const meczData = format(new Date(mecz.dataTreningu), 'yyyy-MM-dd');
+        const istniejeKontrola = istniejaceKontrole.some(k => 
+          format(new Date(k.dataMeczu), 'yyyy-MM-dd') === meczData
+        );
+        
+        if (!istniejeKontrola) {
+          // Utwórz nową kontrolę meczową
+          const statystykiZawodnikow = zawodnicyRes.data.map(z => ({
+            zawodnikId: z._id,
+            ileMinut: 0,
+            ileAsyst: 0,
+            ileBramek: 0,
+            status: 'MN'
+          }));
+          
+          try {
+            const nowaKontrola = await kontroleMeczoweService.create({
+              dataMeczu: mecz.dataTreningu,
+              przeciwnik: mecz.opisCelow || 'Mecz',
+              wynik: '',
+              druzynaId: selectedDruzyna,
+              statystykiZawodnikow
+            });
+            istniejaceKontrole.push(nowaKontrola.data);
+          } catch (err) {
+            console.error('Błąd tworzenia kontroli meczowej:', err);
+          }
+        }
+      }
+      
+      setKontrole(istniejaceKontrole);
     } catch (error) {
       showSnackbar('Błąd ładowania danych', 'error');
     } finally {
