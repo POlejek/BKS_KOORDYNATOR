@@ -37,7 +37,9 @@ function KontrolaMeczowaPage() {
   const [newMecz, setNewMecz] = useState({
     dataMeczu: format(new Date(), 'yyyy-MM-dd'),
     przeciwnik: '',
-    wynik: ''
+    wynik: '',
+    bramkiDruzyny: '',
+    bramkiPrzeciwnika: ''
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
@@ -141,6 +143,9 @@ function KontrolaMeczowaPage() {
         }
       }
       
+      // Sortuj kontrole chronologicznie
+      istniejaceKontrole.sort((a, b) => new Date(a.dataMeczu) - new Date(b.dataMeczu));
+      
       setKontrole(istniejaceKontrole);
     } catch (error) {
       showSnackbar('Błąd ładowania danych', 'error');
@@ -165,8 +170,14 @@ function KontrolaMeczowaPage() {
       }));
 
       // Utwórz kontrolę meczową
+      const wynikFormatowany = (newMecz.bramkiDruzyny || newMecz.bramkiPrzeciwnika) 
+        ? `${newMecz.bramkiDruzyny || '0'} : ${newMecz.bramkiPrzeciwnika || '0'}` 
+        : '';
+      
       await kontroleMeczoweService.create({
-        ...newMecz,
+        dataMeczu: newMecz.dataMeczu,
+        przeciwnik: newMecz.przeciwnik,
+        wynik: wynikFormatowany,
         druzynaId: selectedDruzyna,
         statystykiZawodnikow
       });
@@ -196,7 +207,9 @@ function KontrolaMeczowaPage() {
       setNewMecz({
         dataMeczu: format(new Date(), 'yyyy-MM-dd'),
         przeciwnik: '',
-        wynik: ''
+        wynik: '',
+        bramkiDruzyny: '',
+        bramkiPrzeciwnika: ''
       });
       loadData();
     } catch (error) {
@@ -353,14 +366,33 @@ function KontrolaMeczowaPage() {
                         sx={{ mt: 0.5, mb: 0.5 }}
                         variant="outlined"
                       />
-                      <TextField
-                        value={kontrola.wynik}
-                        onChange={(e) => handleUpdateMeczInfo(kontrola._id, 'wynik', e.target.value)}
-                        size="small"
-                        placeholder="Wynik"
-                        sx={{ mb: 0.5 }}
-                        variant="outlined"
-                      />
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
+                        <TextField
+                          value={kontrola.wynik ? kontrola.wynik.split(':')[0]?.trim() : ''}
+                          onChange={(e) => {
+                            const bramkiPrzeciwnika = kontrola.wynik ? kontrola.wynik.split(':')[1]?.trim() : '';
+                            handleUpdateMeczInfo(kontrola._id, 'wynik', `${e.target.value} : ${bramkiPrzeciwnika}`);
+                          }}
+                          size="small"
+                          placeholder="0"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                        <Typography variant="body2" fontWeight="bold">:</Typography>
+                        <TextField
+                          value={kontrola.wynik ? kontrola.wynik.split(':')[1]?.trim() : ''}
+                          onChange={(e) => {
+                            const bramkiDruzyny = kontrola.wynik ? kontrola.wynik.split(':')[0]?.trim() : '';
+                            handleUpdateMeczInfo(kontrola._id, 'wynik', `${bramkiDruzyny} : ${e.target.value}`);
+                          }}
+                          size="small"
+                          placeholder="0"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: 'center' } }}
+                          sx={{ width: 60 }}
+                        />
+                      </Box>
                       <IconButton
                         size="small"
                         color="error"
@@ -485,13 +517,28 @@ function KontrolaMeczowaPage() {
               fullWidth
               required
             />
-            <TextField
-              label="Wynik (opcjonalnie)"
-              value={newMecz.wynik}
-              onChange={(e) => setNewMecz({ ...newMecz, wynik: e.target.value })}
-              placeholder="np. 3:1"
-              fullWidth
-            />
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Wynik (opcjonalnie)</Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <TextField
+                  label="Moja drużyna"
+                  type="number"
+                  value={newMecz.bramkiDruzyny}
+                  onChange={(e) => setNewMecz({ ...newMecz, bramkiDruzyny: e.target.value })}
+                  inputProps={{ min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+                <Typography variant="h6">:</Typography>
+                <TextField
+                  label="Przeciwnik"
+                  type="number"
+                  value={newMecz.bramkiPrzeciwnika}
+                  onChange={(e) => setNewMecz({ ...newMecz, bramkiPrzeciwnika: e.target.value })}
+                  inputProps={{ min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>

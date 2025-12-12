@@ -28,7 +28,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { druzynyService, planySzkolenioweService, ustawieniaService, kontroleMeczoweService } from '../services';
+import { druzynyService, planySzkolenioweService, ustawieniaService, kontroleMeczoweService, zawodnicyService } from '../services';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, getWeek, isSameDay, addDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -172,6 +172,30 @@ function PlanSzkoleniowy() {
         await planySzkolenioweService.update(editingPlan._id, data);
       } else {
         await planySzkolenioweService.create(data);
+        
+        // Synchronizacja: Jeśli to mecz, utwórz również kontrolę meczową
+        if (formData.typWydarzenia === 'mecz') {
+          try {
+            const zawodnicyRes = await zawodnicyService.getByDruzyna(selectedDruzyna);
+            const statystykiZawodnikow = zawodnicyRes.data.map(z => ({
+              zawodnikId: z._id,
+              ileMinut: 0,
+              ileAsyst: 0,
+              ileBramek: 0,
+              status: 'MN'
+            }));
+            
+            await kontroleMeczoweService.create({
+              dataMeczu: formData.dataTreningu,
+              przeciwnik: formData.opisCelow || 'Mecz',
+              wynik: '',
+              druzynaId: selectedDruzyna,
+              statystykiZawodnikow
+            });
+          } catch (err) {
+            console.error('Błąd tworzenia kontroli meczowej:', err);
+          }
+        }
       }
       handleCloseDialog();
       loadPlany();
