@@ -136,7 +136,19 @@ function KontrolaMeczowaPage() {
         // Jeśli dodano nowych zawodników, zaktualizuj kontrolę w bazie
         if (updated) {
           try {
-            await kontroleMeczoweService.update(kontrola._id, kontrola);
+            // Formatuj statystyki - wyślij tylko ID zawodników, nie całe obiekty
+            const kontrolaToUpdate = {
+              ...kontrola,
+              statystykiZawodnikow: kontrola.statystykiZawodnikow.map(stat => ({
+                zawodnikId: stat.zawodnikId._id || stat.zawodnikId,
+                ileMinut: stat.ileMinut,
+                ileAsyst: stat.ileAsyst,
+                ileBramek: stat.ileBramek,
+                status: stat.status
+              }))
+            };
+            
+            await kontroleMeczoweService.update(kontrola._id, kontrolaToUpdate);
           } catch (err) {
             console.error('Błąd aktualizacji kontroli meczowej:', err);
           }
