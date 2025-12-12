@@ -200,14 +200,14 @@ function KontrolaMeczowaPage() {
           dataTreningu: newMecz.dataMeczu,
           typWydarzenia: 'mecz',
           druzyna: selectedDruzyna,
-          dominujacaFazaGry: 'Finalizacja+Obrona Niska',
+          dominujacaFazaGry: '',
           dnaTechniki: [],
           celMotoryczny: [],
           celMentalny: [],
           opisCelow: newMecz.przeciwnik,
           zalozenia: '',
           cwiczenia: ['', '', '', '', ''],
-          numerTreningWTygodniu: 1
+          numerTreningWTygodniu: 0
         });
       } catch (err) {
         console.error('Błąd dodawania meczu do planu szkoleniowego:', err);

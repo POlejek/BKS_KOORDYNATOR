@@ -22,9 +22,10 @@ const planSzkoleniowy = new mongoose.Schema({
       'Budowanie Gry + Obrona Średnia',
       'Otwarcie gry + Obrona wysoka',
       'Transfer Atak/Obrona',
-      'Transfer Obrona/Atak'
+      'Transfer Obrona/Atak',
+      ''
     ],
-    required: true
+    required: false
   },
   dnaTechniki: [{
     type: String
@@ -53,8 +54,8 @@ const planSzkoleniowy = new mongoose.Schema({
   },
   numerTreningWTygodniu: {
     type: Number,
-    enum: [1, 2, 3, 4],
-    required: true
+    enum: [1, 2, 3, 4, 0],
+    required: false
   }
 }, {
   timestamps: true

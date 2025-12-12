@@ -77,6 +77,9 @@ function PlanSzkoleniowy() {
     try {
       const response = await druzynyService.getAll();
       setDruzyny(response.data);
+      if (response.data.length > 0 && !selectedDruzyna) {
+        setSelectedDruzyna(response.data[0]._id);
+      }
     } catch (error) {
       console.error('Błąd ładowania drużyn:', error);
     }
