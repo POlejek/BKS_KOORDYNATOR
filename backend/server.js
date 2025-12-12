@@ -28,6 +28,7 @@ app.use('/api/druzyny', require('./routes/druzyny'));
 app.use('/api/obecnosci', require('./routes/obecnosci'));
 app.use('/api/plany-szkoleniowe', require('./routes/planySzkoleniowe'));
 app.use('/api/ustawienia', require('./routes/ustawienia'));
+app.use('/api/kontrole-meczowe', require('./routes/kontroleMeczowe'));
 
 // Podstawowa trasa
 app.get('/', (req, res) => {

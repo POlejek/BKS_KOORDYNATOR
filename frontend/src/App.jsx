@@ -19,7 +19,8 @@ import {
   CalendarMonth as CalendarIcon,
   School as SchoolIcon,
   Settings as SettingsIcon,
-  Groups as GroupsIcon
+  Groups as GroupsIcon,
+  SportsScore as SportsScoreIcon
 } from '@mui/icons-material';
 
 // Import stron
@@ -28,6 +29,7 @@ import ZawodnicyPage from './pages/ZawodnicyPage';
 import PlanSzkoleniowy from './pages/PlanSzkoleniowy';
 import UstawieniaPage from './pages/UstawieniaPage';
 import DruzynyPage from './pages/DruzynyPage';
+import KontrolaMeczowaPage from './pages/KontrolaMeczowaPage';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -37,6 +39,7 @@ function App() {
     { text: 'Zawodnicy', icon: <PeopleIcon />, path: '/zawodnicy' },
     { text: 'Obecności', icon: <CalendarIcon />, path: '/obecnosci' },
     { text: 'Plan Szkoleniowy', icon: <SchoolIcon />, path: '/plan-szkoleniowy' },
+    { text: 'Kontrola Meczowa', icon: <SportsScoreIcon />, path: '/kontrola-meczowa' },
     { text: 'Ustawienia', icon: <SettingsIcon />, path: '/ustawienia' },
   ];
 
@@ -69,6 +72,7 @@ function App() {
             <Route path="/zawodnicy" element={<ZawodnicyPage />} />
             <Route path="/obecnosci" element={<ObecnosciPage />} />
             <Route path="/plan-szkoleniowy" element={<PlanSzkoleniowy />} />
+            <Route path="/kontrola-meczowa" element={<KontrolaMeczowaPage />} />
             <Route path="/ustawienia" element={<UstawieniaPage />} />
           </Routes>
         </Container>

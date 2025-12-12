@@ -44,3 +44,5 @@ export const ustawieniaService = {
   addCelMotoryczny: (data) => api.post('/ustawienia/cele-motoryczne', data),
   addCelMentalny: (data) => api.post('/ustawienia/cele-mentalne', data),
 };
+
+export { default as kontroleMeczoweService } from './kontroleMeczoweService';
