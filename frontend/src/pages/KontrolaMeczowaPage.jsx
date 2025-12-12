@@ -199,15 +199,15 @@ function KontrolaMeczowaPage() {
         await planySzkolenioweService.create({
           dataTreningu: newMecz.dataMeczu,
           typWydarzenia: 'mecz',
-          druzynaId: selectedDruzyna,
-          dominujacaFazaGry: '',
+          druzyna: selectedDruzyna,
+          dominujacaFazaGry: 'Finalizacja+Obrona Niska',
           dnaTechniki: [],
           celMotoryczny: [],
           celMentalny: [],
           opisCelow: newMecz.przeciwnik,
           zalozenia: '',
           cwiczenia: ['', '', '', '', ''],
-          numerTreningWTygodniu: 0
+          numerTreningWTygodniu: 1
         });
       } catch (err) {
         console.error('Błąd dodawania meczu do planu szkoleniowego:', err);

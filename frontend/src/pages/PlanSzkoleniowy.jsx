@@ -172,30 +172,6 @@ function PlanSzkoleniowy() {
         await planySzkolenioweService.update(editingPlan._id, data);
       } else {
         await planySzkolenioweService.create(data);
-        
-        // Synchronizacja: Jeśli to mecz, utwórz również kontrolę meczową
-        if (formData.typWydarzenia === 'mecz') {
-          try {
-            const zawodnicyRes = await zawodnicyService.getByDruzyna(selectedDruzyna);
-            const statystykiZawodnikow = zawodnicyRes.data.map(z => ({
-              zawodnikId: z._id,
-              ileMinut: 0,
-              ileAsyst: 0,
-              ileBramek: 0,
-              status: 'MN'
-            }));
-            
-            await kontroleMeczoweService.create({
-              dataMeczu: formData.dataTreningu,
-              przeciwnik: formData.opisCelow || 'Mecz',
-              wynik: '',
-              druzynaId: selectedDruzyna,
-              statystykiZawodnikow
-            });
-          } catch (err) {
-            console.error('Błąd tworzenia kontroli meczowej:', err);
-          }
-        }
       }
       handleCloseDialog();
       loadPlany();
@@ -241,23 +217,18 @@ function PlanSzkoleniowy() {
   };
 
   useEffect(() => {
-    if (formData.typWydarzenia === 'trening' && formData.numerTreningWTygodniu && ustawienia?.zalozeniaTreningow) {
+    if (formData.numerTreningWTygodniu && ustawienia?.zalozeniaTreningow) {
       const zalozenia = getZalozeniaForTrening(formData.numerTreningWTygodniu);
       setFormData(prev => ({
         ...prev,
         zalozenia: zalozenia
       }));
-    } else if (formData.typWydarzenia === 'mecz') {
-      setFormData(prev => ({
-        ...prev,
-        zalozenia: ''
-      }));
     }
-  }, [formData.numerTreningWTygodniu, formData.typWydarzenia, ustawienia]);
+  }, [formData.numerTreningWTygodniu, ustawienia]);
 
   // Aktualizuj numer treningu przy zmianie daty (tylko dla nowych planów, nie dla edycji)
   useEffect(() => {
-    if (!editingPlan && formData.dataTreningu && formData.typWydarzenia === 'trening') {
+    if (!editingPlan && formData.dataTreningu) {
       const nowyNumer = getNumerTreningWTygodniu(formData.dataTreningu);
       if (nowyNumer !== formData.numerTreningWTygodniu) {
         setFormData(prev => ({
@@ -266,7 +237,7 @@ function PlanSzkoleniowy() {
         }));
       }
     }
-  }, [formData.dataTreningu, formData.typWydarzenia, editingPlan, plany]);
+  }, [formData.dataTreningu, editingPlan, plany]);
 
   // Funkcje do obsługi kalendarza tygodniowego
   const getWeeksInMonth = (date) => {
@@ -503,22 +474,9 @@ function PlanSzkoleniowy() {
                 />
               </Grid>
               <Grid item xs={4}>
-                <FormControl fullWidth required>
-                  <InputLabel>Typ wydarzenia</InputLabel>
-                  <Select
-                    value={formData.typWydarzenia}
-                    onChange={(e) => setFormData({ ...formData, typWydarzenia: e.target.value })}
-                    label="Typ wydarzenia"
-                  >
-                    <MenuItem value="trening">Trening</MenuItem>
-                    <MenuItem value="mecz">Mecz</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={4}>
                 <TextField
                   label="Numer treningu w tygodniu"
-                  value={formData.typWydarzenia === 'mecz' ? 'Mecz' : `Trening ${formData.numerTreningWTygodniu}`}
+                  value={`Trening ${formData.numerTreningWTygodniu}`}
                   fullWidth
                   disabled
                   helperText="Ustawiany automatycznie na podstawie daty"
