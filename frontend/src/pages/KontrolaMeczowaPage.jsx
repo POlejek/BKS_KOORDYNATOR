@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -43,6 +43,7 @@ function KontrolaMeczowaPage() {
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [loading, setLoading] = useState(false);
+  const updateTimeouts = useRef({});
 
   useEffect(() => {
     loadDruzyny();
@@ -229,30 +230,52 @@ function KontrolaMeczowaPage() {
     }
   };
 
-  const handleUpdateStat = async (kontrolaId, zawodnikId, field, value) => {
-    try {
-      const kontrola = kontrole.find(k => k._id === kontrolaId);
-      const updatedStats = kontrola.statystykiZawodnikow.map(stat => {
-        if (stat.zawodnikId._id === zawodnikId) {
-          return { ...stat, [field]: value };
-        }
-        return stat;
-      });
+  const handleUpdateStat = useCallback((kontrolaId, zawodnikId, field, value) => {
+    // Natychmiast aktualizuj UI
+    setKontrole(prev => prev.map(k => {
+      if (k._id === kontrolaId) {
+        return {
+          ...k,
+          statystykiZawodnikow: k.statystykiZawodnikow.map(stat => {
+            if (stat.zawodnikId._id === zawodnikId) {
+              return { ...stat, [field]: value };
+            }
+            return stat;
+          })
+        };
+      }
+      return k;
+    }));
 
-      await kontroleMeczoweService.update(kontrolaId, {
-        ...kontrola,
-        statystykiZawodnikow: updatedStats
-      });
-
-      setKontrole(prev => prev.map(k => 
-        k._id === kontrolaId 
-          ? { ...k, statystykiZawodnikow: updatedStats }
-          : k
-      ));
-    } catch (error) {
-      showSnackbar('Błąd aktualizacji', 'error');
+    // Wyczyść poprzedni timeout dla tego pola
+    const timeoutKey = `${kontrolaId}-${zawodnikId}-${field}`;
+    if (updateTimeouts.current[timeoutKey]) {
+      clearTimeout(updateTimeouts.current[timeoutKey]);
     }
-  };
+
+    // Ustaw nowy timeout - zapisz po 800ms bezczynności
+    updateTimeouts.current[timeoutKey] = setTimeout(async () => {
+      try {
+        const kontrola = kontrole.find(k => k._id === kontrolaId);
+        if (!kontrola) return;
+
+        const updatedStats = kontrola.statystykiZawodnikow.map(stat => {
+          if (stat.zawodnikId._id === zawodnikId) {
+            return { ...stat, [field]: value };
+          }
+          return stat;
+        });
+
+        await kontroleMeczoweService.update(kontrolaId, {
+          ...kontrola,
+          statystykiZawodnikow: updatedStats
+        });
+      } catch (error) {
+        console.error('Błąd aktualizacji:', error);
+        showSnackbar('Błąd zapisywania danych', 'error');
+      }
+    }, 800);
+  }, [kontrole]);
 
   const handleUpdateMeczInfo = async (kontrolaId, field, value) => {
     try {
@@ -422,10 +445,11 @@ function KontrolaMeczowaPage() {
                   <TableCell
                     key={`header-${kontrola._id}`}
                     align="center"
-                    sx={{ borderLeft: '2px solid #ddd', fontSize: '0.75rem', p: 1 }}
+                    sx={{ borderLeft: '2px solid #ddd', fontSize: '0.75rem', p: 1, minWidth: 200 }}
                   >
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Typography variant="caption">Min / Asysty / Bramki / Status</Typography>
+                      <Typography variant="caption" fontWeight="bold">Min / Asysty / Bramki</Typography>
+                      <Typography variant="caption" fontWeight="bold">Status</Typography>
                     </Box>
                   </TableCell>
                 ))}
@@ -453,51 +477,79 @@ function KontrolaMeczowaPage() {
                       <TableCell
                         key={`${kontrola._id}-${zawodnik._id}`}
                         align="center"
-                        sx={{ borderLeft: '2px solid #ddd', p: 1 }}
+                        sx={{ borderLeft: '2px solid #ddd', p: 1.5 }}
                       >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                            <TextField
-                              type="number"
-                              value={stat.ileMinut}
-                              onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileMinut', parseInt(e.target.value) || 0)}
-                              size="small"
-                              inputProps={{ min: 0, max: 120, style: { textAlign: 'center', padding: '4px' } }}
-                              sx={{ width: 50 }}
-                            />
-                            <TextField
-                              type="number"
-                              value={stat.ileAsyst}
-                              onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileAsyst', parseInt(e.target.value) || 0)}
-                              size="small"
-                              inputProps={{ min: 0, style: { textAlign: 'center', padding: '4px' } }}
-                              sx={{ width: 45 }}
-                            />
-                            <TextField
-                              type="number"
-                              value={stat.ileBramek}
-                              onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileBramek', parseInt(e.target.value) || 0)}
-                              size="small"
-                              inputProps={{ min: 0, style: { textAlign: 'center', padding: '4px' } }}
-                              sx={{ width: 45 }}
-                            />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
+                                Min
+                              </Typography>
+                              <TextField
+                                type="number"
+                                value={stat.ileMinut}
+                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileMinut', parseInt(e.target.value) || 0)}
+                                size="small"
+                                inputProps={{ 
+                                  min: 0, 
+                                  max: 120, 
+                                  step: 1,
+                                  style: { textAlign: 'center', padding: '6px', fontSize: '0.9rem' } 
+                                }}
+                                sx={{ width: 60 }}
+                              />
+                            </Box>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
+                                Asysty
+                              </Typography>
+                              <TextField
+                                type="number"
+                                value={stat.ileAsyst}
+                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileAsyst', parseInt(e.target.value) || 0)}
+                                size="small"
+                                inputProps={{ 
+                                  min: 0, 
+                                  step: 1,
+                                  style: { textAlign: 'center', padding: '6px', fontSize: '0.9rem' } 
+                                }}
+                                sx={{ width: 60 }}
+                              />
+                            </Box>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
+                                Bramki
+                              </Typography>
+                              <TextField
+                                type="number"
+                                value={stat.ileBramek}
+                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileBramek', parseInt(e.target.value) || 0)}
+                                size="small"
+                                inputProps={{ 
+                                  min: 0, 
+                                  step: 1,
+                                  style: { textAlign: 'center', padding: '6px', fontSize: '0.9rem' } 
+                                }}
+                                sx={{ width: 60 }}
+                              />
+                            </Box>
                           </Box>
                           <Select
                             value={stat.status}
                             onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'status', e.target.value)}
                             size="small"
                             sx={{ 
-                              width: 50,
+                              width: '100%',
                               bgcolor: statusColors[stat.status],
                               color: 'white',
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                              fontSize: '0.75rem',
-                              '& .MuiSelect-select': { padding: '4px', textAlign: 'center' }
+                              fontSize: '0.85rem',
+                              '& .MuiSelect-select': { padding: '6px', textAlign: 'center' }
                             }}
                           >
-                            <MenuItem value="MP">MP</MenuItem>
-                            <MenuItem value="MR">MR</MenuItem>
-                            <MenuItem value="MN">MN</MenuItem>
+                            <MenuItem value="MP">MP - Podstawowy</MenuItem>
+                            <MenuItem value="MR">MR - Rezerwowy</MenuItem>
+                            <MenuItem value="MN">MN - Nieobecny</MenuItem>
                           </Select>
                         </Box>
                       </TableCell>
