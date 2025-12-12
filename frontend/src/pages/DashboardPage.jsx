@@ -128,7 +128,7 @@ function DashboardPage() {
       // Statystyki graczy
       const graczStats = zawodnicyRes.data.map(zawodnik => {
         const kontroleZawodnika = kontroleRes.data.flatMap(k => 
-          k.statystykiZawodnikow.filter(s => 
+          (k.statystykiZawodnikow || []).filter(s => 
             (s.zawodnikId._id || s.zawodnikId) === zawodnik._id
           )
         );
@@ -140,8 +140,8 @@ function DashboardPage() {
         const sredniaMinut = meczeRozegrane > 0 ? Math.round(sumaMinut / meczeRozegrane) : 0;
 
         // Frekwencja (jeśli są dane z obecności)
-        const obecnosciZawodnika = obecnosciRes.data
-          .flatMap(o => o.obecnosci.filter(ob => ob.zawodnikId === zawodnik._id));
+        const obecnosciZawodnika = (obecnosciRes.data || [])
+          .flatMap(o => (o.obecnosci || []).filter(ob => ob.zawodnikId === zawodnik._id));
         
         const frekwencja = obecnosciZawodnika.length > 0
           ? Math.round((obecnosciZawodnika.filter(o => o.status === 'obecny').length / obecnosciZawodnika.length) * 100)
