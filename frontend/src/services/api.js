@@ -3,7 +3,7 @@ import axios from 'axios';
 // Automatyczne wykrywanie środowiska
 const API_URL = import.meta.env.VITE_API_URL || 
                 (import.meta.env.MODE === 'production' 
-                  ? 'https://your-app.up.railway.app/api'  // ZMIEŃ NA URL BACKENDU PO DEPLOYU
+                  ? 'https://heartfelt-adaptation-production.up.railway.app/api'
                   : '/api');
 
 const api = axios.create({
