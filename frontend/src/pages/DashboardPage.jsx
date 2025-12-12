@@ -139,12 +139,32 @@ function DashboardPage() {
         const sumaMinut = kontroleZawodnika.reduce((sum, s) => sum + (s.ileMinut || 0), 0);
         const sredniaMinut = meczeRozegrane > 0 ? Math.round(sumaMinut / meczeRozegrane) : 0;
 
-        // Frekwencja (jeśli są dane z obecności)
+        // Frekwencja - pobierz wszystkie obecności zawodnika
         const obecnosciZawodnika = (obecnosciRes.data || [])
-          .flatMap(o => (o.obecnosci || []).filter(ob => ob.zawodnikId === zawodnik._id));
+          .filter(o => (o.zawodnik._id || o.zawodnik) === zawodnik._id);
         
-        const frekwencja = obecnosciZawodnika.length > 0
-          ? Math.round((obecnosciZawodnika.filter(o => o.status === 'obecny').length / obecnosciZawodnika.length) * 100)
+        // Mapuj datę treningu na typ wydarzenia (trening/mecz) na podstawie planów
+        const datyMeczy = planyRes.data
+          .filter(p => p.typWydarzenia === 'mecz')
+          .map(p => format(new Date(p.dataTreningu), 'yyyy-MM-dd'));
+        
+        // Rozdziel obecności na treningi i mecze
+        const obecnosciNaTreningach = obecnosciZawodnika.filter(o => {
+          const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
+          return !datyMeczy.includes(dataStr);
+        });
+        
+        const obecnosciNaMeczach = obecnosciZawodnika.filter(o => {
+          const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
+          return datyMeczy.includes(dataStr);
+        });
+        
+        const frekwencjaTreningi = obecnosciNaTreningach.length > 0
+          ? Math.round((obecnosciNaTreningach.filter(o => o.status === 'obecny').length / obecnosciNaTreningach.length) * 100)
+          : 0;
+          
+        const frekwencjaMecze = obecnosciNaMeczach.length > 0
+          ? Math.round((obecnosciNaMeczach.filter(o => o.status === 'obecny').length / obecnosciNaMeczach.length) * 100)
           : 0;
 
         return {
@@ -156,7 +176,12 @@ function DashboardPage() {
           sumaAsyst,
           sumaMinut,
           sredniaMinut,
-          frekwencja,
+          frekwencjaTreningi,
+          frekwencjaMecze,
+          obecnosciTreningiLiczba: obecnosciNaTreningach.filter(o => o.status === 'obecny').length,
+          obecnosciTreningiMax: obecnosciNaTreningach.length,
+          obecnosciMeczeLiczba: obecnosciNaMeczach.filter(o => o.status === 'obecny').length,
+          obecnosciMeczeMax: obecnosciNaMeczach.length,
           punkty: sumaBramek + sumaAsyst // Punkty: bramki + asysty
         };
       });
@@ -434,7 +459,8 @@ function DashboardPage() {
                     <TableCell align="center">Bramki</TableCell>
                     <TableCell align="center">Asysty</TableCell>
                     <TableCell align="center">Punkty</TableCell>
-                    <TableCell align="center">Frekwencja</TableCell>
+                    <TableCell align="center">Obecność treningi</TableCell>
+                    <TableCell align="center">Obecność mecze</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -459,13 +485,29 @@ function DashboardPage() {
                         <Chip label={gracz.punkty} size="small" color="primary" />
                       </TableCell>
                       <TableCell align="center">
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
                           <LinearProgress
                             variant="determinate"
-                            value={gracz.frekwencja}
-                            sx={{ flex: 1, height: 6, borderRadius: 1 }}
+                            value={gracz.frekwencjaTreningi}
+                            sx={{ flex: 1, minWidth: 60, height: 6, borderRadius: 1 }}
+                            color={gracz.frekwencjaTreningi >= 80 ? 'success' : gracz.frekwencjaTreningi >= 60 ? 'warning' : 'error'}
                           />
-                          <Typography variant="caption">{gracz.frekwencja}%</Typography>
+                          <Typography variant="caption" sx={{ minWidth: 65 }}>
+                            {gracz.frekwencjaTreningi}% ({gracz.obecnosciTreningiLiczba}/{gracz.obecnosciTreningiMax})
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={gracz.frekwencjaMecze}
+                            sx={{ flex: 1, minWidth: 60, height: 6, borderRadius: 1 }}
+                            color={gracz.frekwencjaMecze >= 80 ? 'success' : gracz.frekwencjaMecze >= 60 ? 'warning' : 'error'}
+                          />
+                          <Typography variant="caption" sx={{ minWidth: 65 }}>
+                            {gracz.frekwencjaMecze}% ({gracz.obecnosciMeczeLiczba}/{gracz.obecnosciMeczeMax})
+                          </Typography>
                         </Box>
                       </TableCell>
                     </TableRow>
