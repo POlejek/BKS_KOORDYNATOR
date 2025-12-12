@@ -1,9 +1,10 @@
 import api from './api';
 
 const kontroleMeczoweService = {
-  getAll: (druzynaId = null) => {
-    const params = druzynaId ? { druzynaId } : {};
-    return api.get('/kontrole-meczowe', { params });
+  getAll: () => api.get('/kontrole-meczowe'),
+  
+  getByDruzyna: (druzynaId) => {
+    return api.get('/kontrole-meczowe', { params: { druzynaId } });
   },
 
   getById: (id) => api.get(`/kontrole-meczowe/${id}`),

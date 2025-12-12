@@ -72,7 +72,7 @@ function KontrolaMeczowaPage() {
       setLoading(true);
       const [zawodnicyRes, kontroleRes, planyRes] = await Promise.all([
         zawodnicyService.getByDruzyna(selectedDruzyna),
-        kontroleMeczoweService.getAll(selectedDruzyna),
+        kontroleMeczoweService.getByDruzyna(selectedDruzyna),
         planySzkolenioweService.getByDruzyna(selectedDruzyna)
       ]);
       
@@ -488,7 +488,10 @@ function KontrolaMeczowaPage() {
                               <TextField
                                 type="number"
                                 value={stat.ileMinut}
-                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileMinut', parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/^0+/, '') || '0';
+                                  handleUpdateStat(kontrola._id, zawodnik._id, 'ileMinut', parseInt(val) || 0);
+                                }}
                                 size="small"
                                 inputProps={{ 
                                   min: 0, 
@@ -506,7 +509,10 @@ function KontrolaMeczowaPage() {
                               <TextField
                                 type="number"
                                 value={stat.ileAsyst}
-                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileAsyst', parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/^0+/, '') || '0';
+                                  handleUpdateStat(kontrola._id, zawodnik._id, 'ileAsyst', parseInt(val) || 0);
+                                }}
                                 size="small"
                                 inputProps={{ 
                                   min: 0, 
@@ -523,7 +529,10 @@ function KontrolaMeczowaPage() {
                               <TextField
                                 type="number"
                                 value={stat.ileBramek}
-                                onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'ileBramek', parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/^0+/, '') || '0';
+                                  handleUpdateStat(kontrola._id, zawodnik._id, 'ileBramek', parseInt(val) || 0);
+                                }}
                                 size="small"
                                 inputProps={{ 
                                   min: 0, 

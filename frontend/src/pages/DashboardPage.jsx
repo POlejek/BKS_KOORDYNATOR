@@ -78,7 +78,7 @@ function DashboardPage() {
 
       const [zawodnicyRes, kontroleRes, planyRes, obecnosciRes] = await Promise.all([
         zawodnicyService.getByDruzyna(selectedDruzyna),
-        kontroleMeczoweService.getAll(selectedDruzyna),
+        kontroleMeczoweService.getByDruzyna(selectedDruzyna),
         planySzkolenioweService.getByDruzyna(selectedDruzyna),
         obecnosciService.getAll().catch(() => ({ data: [] }))
       ]);
