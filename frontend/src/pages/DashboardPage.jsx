@@ -84,7 +84,7 @@ function DashboardPage() {
         zawodnicyService.getByDruzyna(selectedDruzyna),
         kontroleMeczoweService.getByDruzyna(selectedDruzyna),
         planySzkolenioweService.getByDruzyna(selectedDruzyna),
-        obecnosciService.getAll().catch(() => ({ data: [] }))
+        obecnosciService.getByDruzyna(selectedDruzyna).catch(() => ({ data: [] }))
       ]);
 
       console.log('Dashboard - Pobrane dane:', {
@@ -141,7 +141,6 @@ function DashboardPage() {
 
         // Frekwencja (jeśli są dane z obecności)
         const obecnosciZawodnika = obecnosciRes.data
-          .filter(o => o.druzynaId === selectedDruzyna)
           .flatMap(o => o.obecnosci.filter(ob => ob.zawodnikId === zawodnik._id));
         
         const frekwencja = obecnosciZawodnika.length > 0

@@ -22,6 +22,7 @@ export const zawodnicyService = {
 };
 
 export const obecnosciService = {
+  getAll: () => api.get('/obecnosci'),
   getByDruzyna: (druzynaId, params) => api.get(`/obecnosci/druzyna/${druzynaId}`, { params }),
   getByZawodnik: (zawodnikId, params) => api.get(`/obecnosci/zawodnik/${zawodnikId}`, { params }),
   upsert: (druzynaId, data) => api.post(`/obecnosci/druzyna/${druzynaId}`, data),
