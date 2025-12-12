@@ -20,7 +20,8 @@ import {
   School as SchoolIcon,
   Settings as SettingsIcon,
   Groups as GroupsIcon,
-  SportsScore as SportsScoreIcon
+  SportsScore as SportsScoreIcon,
+  Dashboard as DashboardIcon
 } from '@mui/icons-material';
 
 // Import stron
@@ -30,11 +31,13 @@ import PlanSzkoleniowy from './pages/PlanSzkoleniowy';
 import UstawieniaPage from './pages/UstawieniaPage';
 import DruzynyPage from './pages/DruzynyPage';
 import KontrolaMeczowaPage from './pages/KontrolaMeczowaPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
   const menuItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Drużyny', icon: <GroupsIcon />, path: '/druzyny' },
     { text: 'Zawodnicy', icon: <PeopleIcon />, path: '/zawodnicy' },
     { text: 'Obecności', icon: <CalendarIcon />, path: '/obecnosci' },
@@ -67,7 +70,7 @@ function App() {
 
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1 }}>
           <Routes>
-            <Route path="/" element={<DruzynyPage />} />
+            <Route path="/" element={<DashboardPage />} />
             <Route path="/druzyny" element={<DruzynyPage />} />
             <Route path="/zawodnicy" element={<ZawodnicyPage />} />
             <Route path="/obecnosci" element={<ObecnosciPage />} />
