@@ -35,7 +35,11 @@ import { pl } from 'date-fns/locale';
 function DashboardPage() {
   const [druzyny, setDruzyny] = useState([]);
   const [selectedDruzyna, setSelectedDruzyna] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Ustaw pierwszy dzień aktualnego miesiąca
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [stats, setStats] = useState({
     treningi: {
       total: 0,
@@ -83,10 +87,22 @@ function DashboardPage() {
         obecnosciService.getAll().catch(() => ({ data: [] }))
       ]);
 
+      console.log('Dashboard - Pobrane dane:', {
+        zawodnicy: zawodnicyRes.data.length,
+        kontrole: kontroleRes.data.length,
+        plany: planyRes.data.length,
+        okres: `${startDate} - ${endDate}`
+      });
+
       // Filtruj plany według wybranego miesiąca
       const planyWMiesiacu = planyRes.data.filter(plan => {
         const planDate = new Date(plan.dataTreningu);
         return planDate >= new Date(startDate) && planDate <= new Date(endDate);
+      });
+
+      console.log('Dashboard - Po filtrowaniu:', {
+        planyWMiesiacu: planyWMiesiacu.length,
+        wszystkiePlany: planyRes.data.map(p => ({ data: p.dataTreningu, typ: p.typWydarzenia }))
       });
 
       // Statystyki treningów
