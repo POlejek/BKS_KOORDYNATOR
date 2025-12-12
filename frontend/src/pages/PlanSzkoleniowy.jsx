@@ -28,7 +28,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { druzynyService, planySzkolenioweService, ustawieniaService } from '../services';
+import { druzynyService, planySzkolenioweService, ustawieniaService, kontroleMeczoweService } from '../services';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, getWeek, isSameDay, addDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -183,7 +183,27 @@ function PlanSzkoleniowy() {
   const handleDelete = async (planId) => {
     if (window.confirm('Czy na pewno chcesz usunąć ten plan?')) {
       try {
+        const plan = plany.find(p => p._id === planId);
+        
+        // Usuń plan szkoleniowy
         await planySzkolenioweService.delete(planId);
+        
+        // Synchronizacja: Jeśli to był mecz, usuń również kontrolę meczową
+        if (plan && plan.typWydarzenia === 'mecz') {
+          try {
+            const kontroleRes = await kontroleMeczoweService.getAll(selectedDruzyna);
+            const kontrolaMeczu = kontroleRes.data.find(k => 
+              format(new Date(k.dataMeczu), 'yyyy-MM-dd') === format(new Date(plan.dataTreningu), 'yyyy-MM-dd')
+            );
+            
+            if (kontrolaMeczu) {
+              await kontroleMeczoweService.delete(kontrolaMeczu._id);
+            }
+          } catch (err) {
+            console.error('Błąd usuwania kontroli meczowej:', err);
+          }
+        }
+        
         loadPlany();
       } catch (error) {
         console.error('Błąd usuwania planu:', error);

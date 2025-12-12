@@ -111,6 +111,36 @@ function KontrolaMeczowaPage() {
         }
       }
       
+      // Sprawdź czy wszystkie kontrole mają statystyki dla wszystkich zawodników
+      // Jeśli dodano nowych zawodników, dodaj ich do istniejących kontroli
+      for (const kontrola of istniejaceKontrole) {
+        let updated = false;
+        const istniejaceZawodnicyIds = kontrola.statystykiZawodnikow.map(s => s.zawodnikId._id || s.zawodnikId);
+        
+        for (const zawodnik of zawodnicyRes.data) {
+          if (!istniejaceZawodnicyIds.includes(zawodnik._id)) {
+            // Dodaj brakującego zawodnika do statystyk
+            kontrola.statystykiZawodnikow.push({
+              zawodnikId: zawodnik,
+              ileMinut: 0,
+              ileAsyst: 0,
+              ileBramek: 0,
+              status: 'MN'
+            });
+            updated = true;
+          }
+        }
+        
+        // Jeśli dodano nowych zawodników, zaktualizuj kontrolę w bazie
+        if (updated) {
+          try {
+            await kontroleMeczoweService.update(kontrola._id, kontrola);
+          } catch (err) {
+            console.error('Błąd aktualizacji kontroli meczowej:', err);
+          }
+        }
+      }
+      
       setKontrole(istniejaceKontrole);
     } catch (error) {
       showSnackbar('Błąd ładowania danych', 'error');
@@ -134,11 +164,32 @@ function KontrolaMeczowaPage() {
         status: 'MN'
       }));
 
+      // Utwórz kontrolę meczową
       await kontroleMeczoweService.create({
         ...newMecz,
         druzynaId: selectedDruzyna,
         statystykiZawodnikow
       });
+
+      // Synchronizacja: Dodaj również mecz do Planu Szkoleniowego
+      try {
+        await planySzkolenioweService.create({
+          dataTreningu: newMecz.dataMeczu,
+          typWydarzenia: 'mecz',
+          druzynaId: selectedDruzyna,
+          dominujacaFazaGry: '',
+          dnaTechniki: [],
+          celMotoryczny: [],
+          celMentalny: [],
+          opisCelow: newMecz.przeciwnik,
+          zalozenia: '',
+          cwiczenia: ['', '', '', '', ''],
+          numerTreningWTygodniu: 0
+        });
+      } catch (err) {
+        console.error('Błąd dodawania meczu do planu szkoleniowego:', err);
+        // Nie przerywamy procesu, mecz został dodany do kontroli
+      }
 
       showSnackbar('Mecz dodany pomyślnie', 'success');
       setOpenDialog(false);
@@ -197,9 +248,28 @@ function KontrolaMeczowaPage() {
   };
 
   const handleDeleteMecz = async (kontrolaId) => {
-    if (window.confirm('Czy na pewno chcesz usunąć ten mecz?')) {
+    if (window.confirm('Czy na pewno chcesz usunąć ten mecz? Zostanie również usunięty z Planu Szkoleniowego.')) {
       try {
+        const kontrola = kontrole.find(k => k._id === kontrolaId);
+        
+        // Usuń kontrolę meczową
         await kontroleMeczoweService.delete(kontrolaId);
+        
+        // Synchronizacja: Usuń również odpowiadający mecz z Planu Szkoleniowego
+        try {
+          const planyRes = await planySzkolenioweService.getByDruzyna(selectedDruzyna);
+          const meczWPlanie = planyRes.data.find(plan => 
+            plan.typWydarzenia === 'mecz' &&
+            format(new Date(plan.dataTreningu), 'yyyy-MM-dd') === format(new Date(kontrola.dataMeczu), 'yyyy-MM-dd')
+          );
+          
+          if (meczWPlanie) {
+            await planySzkolenioweService.delete(meczWPlanie._id);
+          }
+        } catch (err) {
+          console.error('Błąd usuwania meczu z planu szkoleniowego:', err);
+        }
+        
         showSnackbar('Mecz usunięty pomyślnie', 'success');
         loadData();
       } catch (error) {
@@ -373,15 +443,17 @@ function KontrolaMeczowaPage() {
                             onChange={(e) => handleUpdateStat(kontrola._id, zawodnik._id, 'status', e.target.value)}
                             size="small"
                             sx={{ 
+                              width: 50,
                               bgcolor: statusColors[stat.status],
                               color: 'white',
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                              fontSize: '0.75rem'
+                              fontSize: '0.75rem',
+                              '& .MuiSelect-select': { padding: '4px', textAlign: 'center' }
                             }}
                           >
-                            <MenuItem value="MP">MP - Podstawowy</MenuItem>
-                            <MenuItem value="MR">MR - Rezerwowy</MenuItem>
-                            <MenuItem value="MN">MN - Nieobecny</MenuItem>
+                            <MenuItem value="MP">MP</MenuItem>
+                            <MenuItem value="MR">MR</MenuItem>
+                            <MenuItem value="MN">MN</MenuItem>
                           </Select>
                         </Box>
                       </TableCell>
