@@ -15,7 +15,10 @@
 1. Idź do [railway.app/new](https://railway.app/new)
 2. Wybierz "Deploy from GitHub repo"
 3. Wybierz `POlejek/BKS_KOORDYNATOR`
-4. Railway automatycznie wykryje Dockerfile
+4. **WAŻNE**: W ustawieniach projektu (Settings):
+   - **Root Directory**: ustaw na `backend`
+   - **Builder**: Dockerfile (automatycznie wykryje)
+5. Railway rozpocznie build
 
 #### Opcja B: Przez CLI
 ```bash
