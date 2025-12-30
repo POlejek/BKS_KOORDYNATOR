@@ -35,8 +35,11 @@ import { pl } from 'date-fns/locale';
 function DashboardPage() {
   const [druzyny, setDruzyny] = useState([]);
   const [selectedDruzyna, setSelectedDruzyna] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    // Ustaw pierwszy dzień aktualnego miesiąca
+  const [selectedStartMonth, setSelectedStartMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedEndMonth, setSelectedEndMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
@@ -60,7 +63,17 @@ function DashboardPage() {
     if (selectedDruzyna) {
       loadStatistics();
     }
-  }, [selectedDruzyna, selectedMonth]);
+  }, [selectedDruzyna, selectedStartMonth, selectedEndMonth]);
+
+  const generateMonthsOptions = (monthsRange = 24) => {
+    const now = new Date();
+    const options = [];
+    for (let i = -monthsRange; i <= monthsRange; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      options.push(d);
+    }
+    return options;
+  };
 
   const loadDruzyny = async () => {
     try {
@@ -77,14 +90,14 @@ function DashboardPage() {
   const loadStatistics = async () => {
     try {
       setLoading(true);
-      const startDate = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const startDate = format(startOfMonth(selectedStartMonth), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(selectedEndMonth), 'yyyy-MM-dd');
 
       const [zawodnicyRes, kontroleRes, planyRes, obecnosciRes] = await Promise.all([
         zawodnicyService.getByDruzyna(selectedDruzyna),
         kontroleMeczoweService.getByDruzyna(selectedDruzyna),
         planySzkolenioweService.getByDruzyna(selectedDruzyna),
-        obecnosciService.getByDruzyna(selectedDruzyna).catch(() => ({ data: [] }))
+        obecnosciService.getByDruzyna(selectedDruzyna, { dataOd: startDate, dataDo: endDate }).catch(() => ({ data: [] }))
       ]);
 
       console.log('Dashboard - Pobrane dane:', {
@@ -147,24 +160,46 @@ function DashboardPage() {
         const datyMeczy = planyRes.data
           .filter(p => p.typWydarzenia === 'mecz')
           .map(p => format(new Date(p.dataTreningu), 'yyyy-MM-dd'));
-        
-        // Rozdziel obecności na treningi i mecze
-        const obecnosciNaTreningach = obecnosciZawodnika.filter(o => {
+
+        // Rozdziel obecności na treningi i mecze (uwzględnij Kontrola Meczowa jako obecność)
+        const obecnosciNaTreningach = [];
+        const obecnosciNaMeczachMap = new Map(); // date -> presence (from obecnosci or kontrola)
+
+        obecnosciZawodnika.forEach(o => {
           const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
-          return !datyMeczy.includes(dataStr);
+          if (datyMeczy.includes(dataStr)) {
+            if (!obecnosciNaMeczachMap.has(dataStr)) obecnosciNaMeczachMap.set(dataStr, []);
+            obecnosciNaMeczachMap.get(dataStr).push(o.status);
+          } else {
+            obecnosciNaTreningach.push(o);
+          }
         });
-        
-        const obecnosciNaMeczach = obecnosciZawodnika.filter(o => {
-          const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
-          return datyMeczy.includes(dataStr);
+
+        // Dodaj obecności wynikające z KontrolaMeczowa (MP/MR traktujemy jako obecny)
+        kontroleRes.data.forEach(k => {
+          const dataStr = format(new Date(k.dataMeczu || k.data), 'yyyy-MM-dd');
+          (k.statystykiZawodnikow || []).forEach(s => {
+            const sid = (s.zawodnikId && (s.zawodnikId._id || s.zawodnikId));
+            if (sid === zawodnik._id && (s.status === 'MP' || s.status === 'MR')) {
+              if (datyMeczy.includes(dataStr)) {
+                if (!obecnosciNaMeczachMap.has(dataStr)) obecnosciNaMeczachMap.set(dataStr, []);
+                obecnosciNaMeczachMap.get(dataStr).push('MP');
+              }
+            }
+          });
         });
+
+        const obecnosciNaMeczach = Array.from(obecnosciNaMeczachMap.entries()).map(([date, statuses]) => ({ date, statuses }));
         
         const frekwencjaTreningi = obecnosciNaTreningach.length > 0
           ? Math.round((obecnosciNaTreningach.filter(o => o.status === 'obecny').length / obecnosciNaTreningach.length) * 100)
           : 0;
-          
-        const frekwencjaMecze = obecnosciNaMeczach.length > 0
-          ? Math.round((obecnosciNaMeczach.filter(o => o.status === 'obecny').length / obecnosciNaMeczach.length) * 100)
+
+        // Dla meczów traktujemy jako obecne te daty, gdzie istnieje wpis 'obecny' lub kontrola MP/MR
+        const obecnosciMeczeObecne = obecnosciNaMeczach.map(m => m.statuses.some(s => s === 'obecny' || s === 'MP' || s === 'MR'));
+        const liczbaMeczy = obecnosciNaMeczach.length;
+        const frekwencjaMecze = liczbaMeczy > 0
+          ? Math.round((obecnosciMeczeObecne.filter(Boolean).length / liczbaMeczy) * 100)
           : 0;
 
         return {
@@ -180,7 +215,7 @@ function DashboardPage() {
           frekwencjaMecze,
           obecnosciTreningiLiczba: obecnosciNaTreningach.filter(o => o.status === 'obecny').length,
           obecnosciTreningiMax: obecnosciNaTreningach.length,
-          obecnosciMeczeLiczba: obecnosciNaMeczach.filter(o => o.status === 'obecny').length,
+          obecnosciMeczeLiczba: obecnosciNaMeczach.reduce((sum, m) => sum + (m.statuses.some(s => s === 'obecny' || s === 'MP' || s === 'MR') ? 1 : 0), 0),
           obecnosciMeczeMax: obecnosciNaMeczach.length,
           punkty: sumaBramek + sumaAsyst // Punkty: bramki + asysty
         };
@@ -188,6 +223,12 @@ function DashboardPage() {
 
       // Sortuj graczy według punktów
       graczStats.sort((a, b) => b.punkty - a.punkty);
+
+      // TOP3 obecności na treningach
+      const topTreningi = [...graczStats]
+        .sort((a, b) => b.obecnosciTreningiLiczba - a.obecnosciTreningiLiczba)
+        .slice(0, 3)
+        .map(g => ({ id: g.id, imie: g.imie, nazwisko: g.nazwisko, ilosc: g.obecnosciTreningiLiczba }));
 
       setStats({
         treningi: {
@@ -197,7 +238,8 @@ function DashboardPage() {
           dnaTechniki,
           celeMentalne
         },
-        gracze: graczStats
+        gracze: graczStats,
+        topTreningi
       });
     } catch (error) {
       console.error('Błąd ładowania statystyk:', error);
@@ -240,6 +282,7 @@ function DashboardPage() {
     </Card>
   );
 
+
   const getTopItems = (obj, limit = 5) => {
     return Object.entries(obj)
       .sort(([, a], [, b]) => b - a)
@@ -266,20 +309,31 @@ function DashboardPage() {
             </Select>
           </FormControl>
           <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Miesiąc</InputLabel>
+            <InputLabel>Start miesiąc</InputLabel>
             <Select
-              value={format(selectedMonth, 'yyyy-MM')}
-              onChange={(e) => setSelectedMonth(new Date(e.target.value + '-01'))}
-              label="Miesiąc"
+              value={format(selectedStartMonth, 'yyyy-MM')}
+              onChange={(e) => setSelectedStartMonth(new Date(e.target.value + '-01'))}
+              label="Start miesiąc"
             >
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date(2025, i, 1);
-                return (
-                  <MenuItem key={i} value={format(date, 'yyyy-MM')}>
-                    {format(date, 'LLLL yyyy', { locale: pl })}
-                  </MenuItem>
-                );
-              })}
+              {generateMonthsOptions(24).map((date, idx) => (
+                <MenuItem key={idx} value={format(date, 'yyyy-MM')}>
+                  {format(date, 'LLLL yyyy', { locale: pl })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 150 }}>
+            <InputLabel>End miesiąc</InputLabel>
+            <Select
+              value={format(selectedEndMonth, 'yyyy-MM')}
+              onChange={(e) => setSelectedEndMonth(new Date(e.target.value + '-01'))}
+              label="End miesiąc"
+            >
+              {generateMonthsOptions(24).map((date, idx) => (
+                <MenuItem key={idx} value={format(date, 'yyyy-MM')}>
+                  {format(date, 'LLLL yyyy', { locale: pl })}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>
@@ -413,6 +467,23 @@ function DashboardPage() {
 
         {stats.gracze.length > 0 ? (
           <>
+            {/* TOP3 obecności na treningach (ilość treningów) */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6">TOP 3 obecności na treningach</Typography>
+              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                {(stats.topTreningi || []).map((t, i) => (
+                  <Card key={t.id} sx={{ flex: 1 }}>
+                    <CardContent>
+                      <Typography variant="h6">#{i + 1} {t.imie} {t.nazwisko}</Typography>
+                      <Typography variant="body2">{t.ilosc} treningów</Typography>
+                    </CardContent>
+                  </Card>
+                ))}
+                {(!stats.topTreningi || stats.topTreningi.length === 0) && (
+                  <Typography variant="body2" color="text.secondary">Brak danych</Typography>
+                )}
+              </Box>
+            </Box>
             {/* TOP 3 Gracze */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
               {stats.gracze.slice(0, 3).map((gracz, index) => (

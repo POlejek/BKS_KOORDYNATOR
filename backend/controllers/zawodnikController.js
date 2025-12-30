@@ -43,7 +43,22 @@ exports.getZawodnikById = async (req, res) => {
 // Utwórz nowego zawodnika
 exports.createZawodnik = async (req, res) => {
   try {
+    // Zapobieganie duplikatom (imię, nazwisko, data urodzenia, drużyna)
+    const { imie, nazwisko, dataUrodzenia, druzyna, status, statusKomentarz } = req.body;
+    const existing = await Zawodnik.findOne({ imie, nazwisko, dataUrodzenia, druzyna });
+    if (existing) {
+      return res.status(400).json({ message: 'Zawodnik o tych danych już istnieje' });
+    }
+
+    // Jeśli status NIEAKTYWNY wymaga komentarza (powód)
+    if (status === 'NIEAKTYWNY' && !statusKomentarz) {
+      return res.status(400).json({ message: 'Podaj powód nieaktywności (statusKomentarz)' });
+    }
+
     const zawodnik = new Zawodnik(req.body);
+    // synchronizuj pole aktywny dla kompatybilności
+    zawodnik.aktywny = zawodnik.status !== 'NIEAKTYWNY';
+
     const nowyZawodnik = await zawodnik.save();
     res.status(201).json(nowyZawodnik);
   } catch (error) {
@@ -54,11 +69,32 @@ exports.createZawodnik = async (req, res) => {
 // Aktualizuj zawodnika
 exports.updateZawodnik = async (req, res) => {
   try {
+    const { imie, nazwisko, dataUrodzenia, druzyna, status, statusKomentarz } = req.body;
+
+    // Jeśli status NIEAKTYWNY wymaga komentarza
+    if (status === 'NIEAKTYWNY' && !statusKomentarz) {
+      return res.status(400).json({ message: 'Podaj powód nieaktywności (statusKomentarz)' });
+    }
+
+    // Sprawdź czy inny zawodnik nie ma tych samych danych
+    if (imie && nazwisko && dataUrodzenia && druzyna) {
+      const duplikat = await Zawodnik.findOne({ imie, nazwisko, dataUrodzenia, druzyna, _id: { $ne: req.params.id } });
+      if (duplikat) {
+        return res.status(400).json({ message: 'Inny zawodnik o tych danych już istnieje' });
+      }
+    }
+
+    // Synchronizuj pole aktywny
+    if (status) {
+      req.body.aktywny = status !== 'NIEAKTYWNY';
+    }
+
     const zawodnik = await Zawodnik.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
+
     if (!zawodnik) {
       return res.status(404).json({ message: 'Zawodnik nie znaleziony' });
     }

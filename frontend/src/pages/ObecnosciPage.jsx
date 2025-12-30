@@ -43,6 +43,17 @@ function ObecnosciPage() {
     }
   }, [selectedDruzyna, selectedMonth]);
 
+  const generateMonthsOptions = (monthsRange = 12) => {
+    const now = new Date();
+    const options = [];
+    for (let i = -monthsRange; i <= monthsRange; i++) {
+      options.push(new Date(now.getFullYear(), now.getMonth() + i, 1));
+    }
+    return options;
+  };
+
+  const [selectedDateForAll, setSelectedDateForAll] = useState('');
+
   const loadDruzyny = async () => {
     try {
       const response = await druzynyService.getAll();
@@ -173,16 +184,43 @@ function ObecnosciPage() {
               onChange={(e) => setSelectedMonth(new Date(e.target.value + '-01'))}
               label="Miesiąc"
             >
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date(2025, i, 1);
-                return (
-                  <MenuItem key={i} value={format(date, 'yyyy-MM')}>
-                    {format(date, 'LLLL yyyy', { locale: pl })}
-                  </MenuItem>
-                );
-              })}
+              {generateMonthsOptions(12).map((date, i) => (
+                <MenuItem key={i} value={format(date, 'yyyy-MM')}>
+                  {format(date, 'LLLL yyyy', { locale: pl })}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Data (do masowego oznaczania)</InputLabel>
+            <Select
+              value={selectedDateForAll}
+              onChange={(e) => setSelectedDateForAll(e.target.value)}
+              label="Data (do masowego oznaczania)"
+            >
+              {dniMiesiaca.map((d) => (
+                <MenuItem key={d.toString()} value={format(d, 'yyyy-MM-dd')}>
+                  {format(d, 'dd LLL yyyy', { locale: pl })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button variant="contained" onClick={async () => {
+            if (!selectedDateForAll) return alert('Wybierz datę');
+            if (!window.confirm('Oznaczyć obecny dla wszystkich zawodników na wybraną datę?')) return;
+            try {
+              await Promise.all(zawodnicy.map(z => obecnosciService.upsert(selectedDruzyna, {
+                zawodnikId: z._id,
+                dataTreningu: selectedDateForAll,
+                status: 'obecny'
+              })));
+              loadObecnosci();
+              alert('Oznaczono obecny dla wszystkich');
+            } catch (err) {
+              console.error('Błąd oznaczania obecnych:', err);
+              alert('Błąd oznaczania obecnych');
+            }
+          }}>Oznacz obecny dla wszystkich</Button>
         </Box>
       </Box>
 

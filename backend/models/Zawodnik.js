@@ -19,11 +19,28 @@ const zawodnikSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  dgaWazneDo: {
+    type: Date
+  },
   druzyna: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Druzyna',
     required: true
   },
+  // Status zawodnika i powód nieaktywności
+  status: {
+    type: String,
+    enum: ['AKTYWNY', 'NIEAKTYWNY'],
+    default: 'AKTYWNY'
+  },
+  statusKomentarz: {
+    type: String
+  },
+  // Kontakty
+  mail1: { type: String },
+  mail2: { type: String },
+  telefon1: { type: String },
+  telefon2: { type: String },
   dokumenty: [{
     typ: {
       type: String,
@@ -44,6 +61,9 @@ const zawodnikSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Unikalny indeks aby zapobiec duplikatom (imię, nazwisko, data urodzenia, drużyna)
+zawodnikSchema.index({ imie: 1, nazwisko: 1, dataUrodzenia: 1, druzyna: 1 }, { unique: true, sparse: true });
 
 // Metoda do sprawdzenia czy badania są ważne
 zawodnikSchema.methods.czySaBadaniaWazne = function() {

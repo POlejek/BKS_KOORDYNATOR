@@ -48,6 +48,15 @@ function PlanSzkoleniowy() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+
+  const generateMonthsOptions = (monthsRange = 24) => {
+    const now = new Date();
+    const options = [];
+    for (let i = -monthsRange; i <= monthsRange; i++) {
+      options.push(new Date(now.getFullYear(), now.getMonth() + i, 1));
+    }
+    return options;
+  };
   const [formData, setFormData] = useState({
     dataTreningu: format(new Date(), 'yyyy-MM-dd'),
     typWydarzenia: 'trening',
@@ -300,14 +309,11 @@ function PlanSzkoleniowy() {
               onChange={(e) => setSelectedMonth(new Date(e.target.value + '-01'))}
               label="Miesiąc"
             >
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date(2025, i, 1);
-                return (
-                  <MenuItem key={i} value={format(date, 'yyyy-MM')}>
-                    {format(date, 'LLLL yyyy', { locale: pl })}
-                  </MenuItem>
-                );
-              })}
+              {generateMonthsOptions(24).map((date, i) => (
+                <MenuItem key={i} value={format(date, 'yyyy-MM')}>
+                  {format(date, 'LLLL yyyy', { locale: pl })}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           {selectedDruzyna && (

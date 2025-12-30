@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, AttachFile } from '@mui/icons-material';
 import { zawodnicyService, druzynyService } from '../services';
+import api from '../services/api';
 import { format } from 'date-fns';
 
 function ZawodnicyPage() {
@@ -37,8 +38,17 @@ function ZawodnicyPage() {
     nazwisko: '',
     dataUrodzenia: '',
     okresWaznosciBadan: '',
-    druzyna: ''
+    druzyna: '',
+    status: 'AKTYWNY',
+    statusKomentarz: '',
+    dgaWazneDo: '',
+    mail1: '',
+    mail2: '',
+    telefon1: '',
+    telefon2: ''
   });
+  const [plik, setPlik] = useState(null);
+  const [dokumentTyp, setDokumentTyp] = useState('badania_lekarskie');
 
   useEffect(() => {
     loadDruzyny();
@@ -85,7 +95,14 @@ function ZawodnicyPage() {
         nazwisko: zawodnik.nazwisko,
         dataUrodzenia: zawodnik.dataUrodzenia ? format(new Date(zawodnik.dataUrodzenia), 'yyyy-MM-dd') : '',
         okresWaznosciBadan: zawodnik.okresWaznosciBadan ? format(new Date(zawodnik.okresWaznosciBadan), 'yyyy-MM-dd') : '',
-        druzyna: zawodnik.druzyna._id || zawodnik.druzyna
+        druzyna: zawodnik.druzyna._id || zawodnik.druzyna,
+        status: zawodnik.status || (zawodnik.aktywny ? 'AKTYWNY' : 'NIEAKTYWNY'),
+        statusKomentarz: zawodnik.statusKomentarz || '',
+        dgaWazneDo: zawodnik.dgaWazneDo ? format(new Date(zawodnik.dgaWazneDo), 'yyyy-MM-dd') : '',
+        mail1: zawodnik.mail1 || '',
+        mail2: zawodnik.mail2 || '',
+        telefon1: zawodnik.telefon1 || '',
+        telefon2: zawodnik.telefon2 || ''
       });
     } else {
       setEditingZawodnik(null);
@@ -94,8 +111,17 @@ function ZawodnicyPage() {
         nazwisko: '',
         dataUrodzenia: '',
         okresWaznosciBadan: '',
-        druzyna: selectedDruzyna || ''
+        druzyna: selectedDruzyna || '',
+        status: 'AKTYWNY',
+        statusKomentarz: '',
+        dgaWazneDo: '',
+        mail1: '',
+        mail2: '',
+        telefon1: '',
+        telefon2: ''
       });
+      setPlik(null);
+      setDokumentTyp('badania_lekarskie');
     }
     setOpenDialog(true);
   };
@@ -116,7 +142,56 @@ function ZawodnicyPage() {
       loadZawodnicy(selectedDruzyna || null);
     } catch (error) {
       console.error('Błąd zapisywania zawodnika:', error);
+      alert(error.response?.data?.message || 'Błąd zapisywania zawodnika');
     }
+  };
+
+  const handleFileChange = (e) => {
+    setPlik(e.target.files[0] || null);
+  };
+
+  const handleUploadDokument = async () => {
+    if (!editingZawodnik) return;
+    if (!plik) {
+      alert('Wybierz plik do przesłania');
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('plik', plik);
+    fd.append('typ', dokumentTyp);
+
+    try {
+      await zawodnicyService.addDokument(editingZawodnik._id, fd);
+      const resp = await zawodnicyService.getById(editingZawodnik._id);
+      setEditingZawodnik(resp.data);
+      loadZawodnicy(selectedDruzyna || null);
+      setPlik(null);
+      setDokumentTyp('badania_lekarskie');
+    } catch (err) {
+      console.error('Błąd uploadu:', err);
+      alert('Błąd przesyłania pliku');
+    }
+  };
+
+  const handleDeleteDokument = async (dokumentId) => {
+    if (!editingZawodnik) return;
+    if (!window.confirm('Usunąć dokument?')) return;
+    try {
+      await zawodnicyService.deleteDokument(editingZawodnik._id, dokumentId);
+      const resp = await zawodnicyService.getById(editingZawodnik._id);
+      setEditingZawodnik(resp.data);
+      loadZawodnicy(selectedDruzyna || null);
+    } catch (err) {
+      console.error('Błąd usuwania dokumentu:', err);
+      alert('Błąd usuwania dokumentu');
+    }
+  };
+
+  const makeDownloadUrl = (sciezkaPliku) => {
+    if (!sciezkaPliku) return '#';
+    const base = api.defaults.baseURL?.endsWith('/api') ? api.defaults.baseURL.slice(0, -4) : api.defaults.baseURL || '';
+    return `${base}/${sciezkaPliku}`;
   };
 
   const handleDelete = async (id) => {
@@ -173,6 +248,9 @@ function ZawodnicyPage() {
               <TableCell>Data urodzenia</TableCell>
               <TableCell>Drużyna</TableCell>
               <TableCell>Badania lekarskie</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>DGA</TableCell>
+              <TableCell>Kontakt</TableCell>
               <TableCell>Dokumenty</TableCell>
               <TableCell align="right">Akcje</TableCell>
             </TableRow>
@@ -192,6 +270,18 @@ function ZawodnicyPage() {
                     color={isBadaniaWazne(zawodnik.okresWaznosciBadan) ? 'success' : 'error'}
                     size="small"
                   />
+                </TableCell>
+                <TableCell>{zawodnik.status || (zawodnik.aktywny ? 'AKTYWNY' : 'NIEAKTYWNY')}</TableCell>
+                <TableCell>{zawodnik.dgaWazneDo ? format(new Date(zawodnik.dgaWazneDo), 'dd.MM.yyyy') : '-'}</TableCell>
+                <TableCell>
+                  {zawodnik.mail1 || zawodnik.telefon1 ? (
+                    <div>
+                      {zawodnik.mail1 && <div>{zawodnik.mail1}</div>}
+                      {zawodnik.mail2 && <div>{zawodnik.mail2}</div>}
+                      {zawodnik.telefon1 && <div>{zawodnik.telefon1}</div>}
+                      {zawodnik.telefon2 && <div>{zawodnik.telefon2}</div>}
+                    </div>
+                  ) : '-'}
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -266,7 +356,91 @@ function ZawodnicyPage() {
                 ))}
               </Select>
             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                label="Status"
+              >
+                <MenuItem value="AKTYWNY">AKTYWNY</MenuItem>
+                <MenuItem value="NIEAKTYWNY">NIEAKTYWNY</MenuItem>
+              </Select>
+            </FormControl>
+            {formData.status === 'NIEAKTYWNY' && (
+              <TextField
+                label="Powód nieaktywności"
+                value={formData.statusKomentarz}
+                onChange={(e) => setFormData({ ...formData, statusKomentarz: e.target.value })}
+                fullWidth
+                required
+              />
+            )}
+            <TextField
+              label="DGA - data ważności"
+              type="date"
+              value={formData.dgaWazneDo}
+              onChange={(e) => setFormData({ ...formData, dgaWazneDo: e.target.value })}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Mail 1"
+              value={formData.mail1}
+              onChange={(e) => setFormData({ ...formData, mail1: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Mail 2"
+              value={formData.mail2}
+              onChange={(e) => setFormData({ ...formData, mail2: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Telefon 1"
+              value={formData.telefon1}
+              onChange={(e) => setFormData({ ...formData, telefon1: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Telefon 2"
+              value={formData.telefon2}
+              onChange={(e) => setFormData({ ...formData, telefon2: e.target.value })}
+              fullWidth
+            />
           </Box>
+          {editingZawodnik && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Dokumenty</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {(editingZawodnik.dokumenty || []).map((dok) => (
+                  <Box key={dok._id || dok.dataZaladowania} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label={dok.typ === 'badania_lekarskie' ? 'Badania' : dok.typ === 'deklaracja_gry_amatora' ? 'DGA' : 'Inne'} size="small" />
+                    <Typography sx={{ flex: 1 }}>{dok.nazwa}</Typography>
+                    <Button size="small" onClick={() => window.open(makeDownloadUrl(dok.sciezkaPliku), '_blank')}>Pobierz</Button>
+                    <Button size="small" color="error" onClick={() => handleDeleteDokument(dok._id)}>Usuń</Button>
+                  </Box>
+                ))}
+
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
+                  <FormControl size="small" sx={{ minWidth: 180 }}>
+                    <InputLabel>Typ dokumentu</InputLabel>
+                    <Select
+                      value={dokumentTyp}
+                      label="Typ dokumentu"
+                      onChange={(e) => setDokumentTyp(e.target.value)}
+                    >
+                      <MenuItem value="badania_lekarskie">Badania lekarskie</MenuItem>
+                      <MenuItem value="deklaracja_gry_amatora">DGA</MenuItem>
+                      <MenuItem value="inne">Inne</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <input type="file" onChange={handleFileChange} />
+                  <Button variant="contained" onClick={handleUploadDokument}>Prześlij</Button>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Anuluj</Button>
