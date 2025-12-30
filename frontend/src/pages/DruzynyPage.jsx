@@ -29,6 +29,8 @@ function DruzynyPage() {
     rocznik: '',
     trener: ''
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadDruzyny();
@@ -65,6 +67,14 @@ function DruzynyPage() {
   };
 
   const handleSave = async () => {
+    // Client-side validation
+    if (!formData.nazwa || !formData.rocznik || !formData.trener) {
+      setError('Uzupełnij wszystkie wymagane pola: nazwa, rocznik i trener.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
     try {
       if (editingDruzyna) {
         await druzynyService.update(editingDruzyna._id, formData);
@@ -73,8 +83,13 @@ function DruzynyPage() {
       }
       handleCloseDialog();
       loadDruzyny();
-    } catch (error) {
-      console.error('Błąd zapisywania drużyny:', error);
+    } catch (err) {
+      console.error('Błąd zapisywania drużyny:', err);
+      // pokaż przyjazny komunikat użytkownikowi
+      const msg = err?.response?.data?.message || err.message || 'Błąd zapisu drużyny';
+      setError(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -138,6 +153,11 @@ function DruzynyPage() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {error && (
+              <Box sx={{ mb: 1 }}>
+                <Typography color="error">{error}</Typography>
+              </Box>
+            )}
             <TextField
               label="Nazwa drużyny"
               value={formData.nazwa}
@@ -162,9 +182,9 @@ function DruzynyPage() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Anuluj</Button>
-          <Button onClick={handleSave} variant="contained">
-            Zapisz
+          <Button onClick={handleCloseDialog} disabled={saving}>Anuluj</Button>
+          <Button onClick={handleSave} variant="contained" disabled={saving}>
+            {saving ? 'Zapisuję...' : 'Zapisz'}
           </Button>
         </DialogActions>
       </Dialog>
