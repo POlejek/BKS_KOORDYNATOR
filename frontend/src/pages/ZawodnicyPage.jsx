@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, AttachFile } from '@mui/icons-material';
 import { zawodnicyService, druzynyService } from '../services';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { format } from 'date-fns';
 
