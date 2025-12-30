@@ -32,6 +32,7 @@ import UstawieniaPage from './pages/UstawieniaPage';
 import DruzynyPage from './pages/DruzynyPage';
 import KontrolaMeczowaPage from './pages/KontrolaMeczowaPage';
 import DashboardPage from './pages/DashboardPage';
+import PlayerPage from './pages/PlayerPage';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -73,6 +74,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/druzyny" element={<DruzynyPage />} />
             <Route path="/zawodnicy" element={<ZawodnicyPage />} />
+            <Route path="/zawodnicy/:id" element={<PlayerPage />} />
             <Route path="/obecnosci" element={<ObecnosciPage />} />
             <Route path="/plan-szkoleniowy" element={<PlanSzkoleniowy />} />
             <Route path="/kontrola-meczowa" element={<KontrolaMeczowaPage />} />

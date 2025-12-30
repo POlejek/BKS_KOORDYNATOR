@@ -258,8 +258,8 @@ function ZawodnicyPage() {
           <TableBody>
             {zawodnicy.map((zawodnik) => (
               <TableRow key={zawodnik._id}>
-                <TableCell>{zawodnik.imie}</TableCell>
-                <TableCell>{zawodnik.nazwisko}</TableCell>
+                <TableCell><Link to={`/zawodnicy/${zawodnik._id}`} style={{ textDecoration: 'none' }}>{zawodnik.imie}</Link></TableCell>
+                <TableCell><Link to={`/zawodnicy/${zawodnik._id}`} style={{ textDecoration: 'none' }}>{zawodnik.nazwisko}</Link></TableCell>
                 <TableCell>
                   {zawodnik.dataUrodzenia ? format(new Date(zawodnik.dataUrodzenia), 'dd.MM.yyyy') : '-'}
                 </TableCell>

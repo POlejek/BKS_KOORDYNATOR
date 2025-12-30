@@ -161,35 +161,42 @@ function DashboardPage() {
           .filter(p => p.typWydarzenia === 'mecz')
           .map(p => format(new Date(p.dataTreningu), 'yyyy-MM-dd'));
 
-        // Rozdziel obecności na treningi i mecze (uwzględnij Kontrola Meczowa jako obecność)
+        // Rozdziel obecności na treningi i mecze (uwzględnij brak wpisu jako nieobecny - MN)
         const obecnosciNaTreningach = [];
-        const obecnosciNaMeczachMap = new Map(); // date -> presence (from obecnosci or kontrola)
 
+        // Map of obecnosci by date
+        const obecnosciByDate = {};
         obecnosciZawodnika.forEach(o => {
           const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
-          if (datyMeczy.includes(dataStr)) {
-            if (!obecnosciNaMeczachMap.has(dataStr)) obecnosciNaMeczachMap.set(dataStr, []);
-            obecnosciNaMeczachMap.get(dataStr).push(o.status);
-          } else {
-            obecnosciNaTreningach.push(o);
-          }
+          if (!obecnosciByDate[dataStr]) obecnosciByDate[dataStr] = [];
+          obecnosciByDate[dataStr].push(o.status);
+          // Separate training presences
+          const isMatch = datyMeczy.includes(dataStr);
+          if (!isMatch) obecnosciNaTreningach.push(o);
         });
 
-        // Dodaj obecności wynikające z KontrolaMeczowa (MP/MR traktujemy jako obecny)
-        kontroleRes.data.forEach(k => {
-          const dataStr = format(new Date(k.dataMeczu || k.data), 'yyyy-MM-dd');
-          (k.statystykiZawodnikow || []).forEach(s => {
-            const sid = (s.zawodnikId && (s.zawodnikId._id || s.zawodnikId));
-            if (sid === zawodnik._id && (s.status === 'MP' || s.status === 'MR')) {
-              if (datyMeczy.includes(dataStr)) {
-                if (!obecnosciNaMeczachMap.has(dataStr)) obecnosciNaMeczachMap.set(dataStr, []);
-                obecnosciNaMeczachMap.get(dataStr).push('MP');
-              }
+        // For each match date, collect statuses from obecnosci and kontrola
+        const obecnosciNaMeczach = datyMeczy.map(dateStr => {
+          const statuses = [];
+
+          // obecnosci entries
+          if (obecnosciByDate[dateStr]) {
+            statuses.push(...obecnosciByDate[dateStr]);
+          }
+
+          // kontrola entries for that date and this player
+          kontroleRes.data.forEach(k => {
+            const kDate = format(new Date(k.dataMeczu || k.data), 'yyyy-MM-dd');
+            if (kDate === dateStr) {
+              (k.statystykiZawodnikow || []).forEach(s => {
+                const sid = (s.zawodnikId && (s.zawodnikId._id || s.zawodnikId));
+                if (sid === zawodnik._id && s.status) statuses.push(s.status);
+              });
             }
           });
-        });
 
-        const obecnosciNaMeczach = Array.from(obecnosciNaMeczachMap.entries()).map(([date, statuses]) => ({ date, statuses }));
+          return { date: dateStr, statuses };
+        });
         
         const frekwencjaTreningi = obecnosciNaTreningach.length > 0
           ? Math.round((obecnosciNaTreningach.filter(o => o.status === 'obecny').length / obecnosciNaTreningach.length) * 100)
@@ -197,7 +204,8 @@ function DashboardPage() {
 
         // Dla meczów traktujemy jako obecne te daty, gdzie istnieje wpis 'obecny' lub kontrola MP/MR
         const obecnosciMeczeObecne = obecnosciNaMeczach.map(m => m.statuses.some(s => s === 'obecny' || s === 'MP' || s === 'MR'));
-        const liczbaMeczy = obecnosciNaMeczach.length;
+        // liczba meczów powinna być liczbą meczów z planu, nie tylko tych z wpisami obecnosci
+        const liczbaMeczy = datyMeczy.length;
         const frekwencjaMecze = liczbaMeczy > 0
           ? Math.round((obecnosciMeczeObecne.filter(Boolean).length / liczbaMeczy) * 100)
           : 0;
@@ -472,9 +480,9 @@ function DashboardPage() {
               <Typography variant="h6">TOP 3 obecności na treningach</Typography>
               <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                 {(stats.topTreningi || []).map((t, i) => (
-                  <Card key={t.id} sx={{ flex: 1 }}>
+                  <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
                     <CardContent>
-                      <Typography variant="h6">#{i + 1} {t.imie} {t.nazwisko}</Typography>
+                      <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
                       <Typography variant="body2">{t.ilosc} treningów</Typography>
                     </CardContent>
                   </Card>
@@ -501,7 +509,7 @@ function DashboardPage() {
                         </Typography>
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="h6">
-                            {gracz.imie} {gracz.nazwisko}
+                            <Link to={`/zawodnicy/${gracz.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{gracz.imie} {gracz.nazwisko}</Link>
                           </Typography>
                           <Typography variant="body2">
                             {gracz.sumaBramek} bramek • {gracz.sumaAsyst} asyst
