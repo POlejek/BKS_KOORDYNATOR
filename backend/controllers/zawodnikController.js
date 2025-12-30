@@ -168,7 +168,8 @@ exports.deleteDokument = async (req, res) => {
       console.error('Błąd usuwania pliku:', err);
     }
 
-    dokument.remove();
+    // Usuń dokument z tablicy i zapisz
+    zawodnik.dokumenty = zawodnik.dokumenty.filter(d => d._id.toString() !== dokument._id.toString());
     await zawodnik.save();
 
     res.json({ message: 'Dokument został usunięty' });
