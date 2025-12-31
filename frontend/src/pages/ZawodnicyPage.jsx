@@ -193,8 +193,14 @@ function ZawodnicyPage() {
 
   const makeDownloadUrl = (sciezkaPliku) => {
     if (!sciezkaPliku) return '#';
-    const base = api.defaults.baseURL?.endsWith('/api') ? api.defaults.baseURL.slice(0, -4) : api.defaults.baseURL || '';
-    return `${base}/${sciezkaPliku}`;
+    let base = api.defaults.baseURL || '';
+    // Usunięcie '/api' z końca baseURL jeśli istnieje
+    if (base.endsWith('/api')) {
+      base = base.slice(0, -4);
+    }
+    // Upewnij się że ścieżka pliku zaczyna się od '/'
+    const path = sciezkaPliku.startsWith('/') ? sciezkaPliku : `/${sciezkaPliku}`;
+    return `${base}${path}`;
   };
 
   const handleDelete = async (id) => {
