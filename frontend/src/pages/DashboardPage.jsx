@@ -29,7 +29,7 @@ import {
   CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import { druzynyService, zawodnicyService, kontroleMeczoweService, planySzkolenioweService, obecnosciService } from '../services';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -66,6 +66,8 @@ function DashboardPage() {
       loadStatistics();
     }
   }, [selectedDruzyna, selectedStartMonth, selectedEndMonth]);
+
+  const navigate = useNavigate();
 
   const generateMonthsOptions = (monthsRange = 24) => {
     const now = new Date();
@@ -518,15 +520,21 @@ function DashboardPage() {
               <Grid item xs={12} md={4}>
                 <Typography variant="h6">Skuteczność</Typography>
                 <Box sx={{ mt: 1 }}>
-                  {(stats.gracze || []).slice(0, 5).map((g, i) => (
-                    <Box key={g.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
-                      <Box>
-                        <Typography variant="body2"><Link to={`/zawodnicy/${g.id}`} style={{ textDecoration: 'none' }}>{g.imie} {g.nazwisko}</Link></Typography>
-                        <Typography variant="caption" color="text.secondary">{g.sumaBramek} br. • {g.sumaAsyst} ast</Typography>
-                      </Box>
-                      <Typography variant="body1" fontWeight="bold">{g.punkty}</Typography>
-                    </Box>
-                  ))}
+                      {(stats.gracze || []).slice(0, 5).map((g, i) => (
+                        <Card
+                          key={g.id}
+                          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, mb: 1, cursor: 'pointer', bgcolor: i === 0 ? 'warning.light' : 'background.paper' }}
+                          onClick={() => navigate(`/zawodnicy/${g.id}`)}
+                        >
+                          <Box>
+                            <Typography variant="body1" sx={{ textDecoration: 'none' }}>{g.imie} {g.nazwisko}</Typography>
+                            <Typography variant="caption" color="text.secondary">{g.sumaBramek} br. • {g.sumaAsyst} ast</Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h6" fontWeight="bold">{g.punkty}</Typography>
+                          </Box>
+                        </Card>
+                      ))}
                 </Box>
               </Grid>
 
@@ -579,7 +587,7 @@ function DashboardPage() {
                 </TableHead>
                 <TableBody>
                   {stats.gracze.map((gracz, index) => (
-                    <TableRow key={gracz.id} hover>
+                    <TableRow key={gracz.id} hover onClick={() => navigate(`/zawodnicy/${gracz.id}`)} sx={{ cursor: 'pointer' }}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <Typography variant="body2" fontWeight={index < 3 ? 'bold' : 'normal'}>
