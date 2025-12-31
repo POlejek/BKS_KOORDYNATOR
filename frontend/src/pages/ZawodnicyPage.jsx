@@ -50,6 +50,8 @@ function ZawodnicyPage() {
   });
   const [plik, setPlik] = useState(null);
   const [dokumentTyp, setDokumentTyp] = useState('badania_lekarskie');
+  const [openDocDialog, setOpenDocDialog] = useState(false);
+  const [selectedZawodnikDocs, setSelectedZawodnikDocs] = useState(null);
 
   useEffect(() => {
     loadDruzyny();
@@ -285,11 +287,18 @@ function ZawodnicyPage() {
                   ) : '-'}
                 </TableCell>
                 <TableCell>
-                  <Chip
-                    icon={<AttachFile />}
-                    label={zawodnik.dokumenty?.length || 0}
+                  <IconButton
                     size="small"
-                  />
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedZawodnikDocs(zawodnik);
+                      setOpenDocDialog(true);
+                    }}
+                    color={zawodnik.dokumenty?.length > 0 ? 'primary' : 'default'}
+                  >
+                    <AttachFile />
+                  </IconButton>
+                  {zawodnik.dokumenty?.length || 0}
                 </TableCell>
                 <TableCell align="right">
                   <IconButton onClick={() => handleOpenDialog(zawodnik)} color="primary">
@@ -448,6 +457,48 @@ function ZawodnicyPage() {
           <Button onClick={handleSave} variant="contained">
             Zapisz
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog do wyświetlania dokumentów */}
+      <Dialog open={openDocDialog} onClose={() => setOpenDocDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Dokumenty - {selectedZawodnikDocs?.imie} {selectedZawodnikDocs?.nazwisko}
+        </DialogTitle>
+        <DialogContent>
+          {selectedZawodnikDocs?.dokumenty && selectedZawodnikDocs.dokumenty.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              {selectedZawodnikDocs.dokumenty.map((dok) => (
+                <Box 
+                  key={dok._id || dok.dataZaladowania}
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2, 
+                    p: 2, 
+                    border: '1px solid #ddd',
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: '#f5f5f5' }
+                  }}
+                  onClick={() => window.open(api.defaults.baseURL + dok.sciezkaPliku.replace(/^\//, ''), '_blank')}
+                >
+                  <AttachFile color="primary" />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" fontWeight="bold">
+                      {dok.typ === 'badania_lekarskie' ? 'Badania lekarskie' : dok.typ === 'deklaracja_gry_amatora' ? 'Deklaracja gry amatora' : 'Inne'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">{dok.nazwa}</Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography color="text.secondary" sx={{ mt: 2 }}>Brak dokumentów</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDocDialog(false)}>Zamknij</Button>
         </DialogActions>
       </Dialog>
     </Box>

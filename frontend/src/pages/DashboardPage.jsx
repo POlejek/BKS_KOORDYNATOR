@@ -540,13 +540,17 @@ function DashboardPage() {
 
               <Grid item xs={12} md={4}>
                 <Typography variant="h6">Frekwencja (treningi) - TOP 3</Typography>
-                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <Box sx={{ mt: 1 }}>
                   {(stats.topTreningi || []).map((t, i) => (
-                    <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
-                      <CardContent>
-                        <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
-                        <Typography variant="body2">{t.ilosc} treningów</Typography>
-                      </CardContent>
+                    <Card
+                      key={t.id}
+                      sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, mb: 1, cursor: 'pointer', bgcolor: i === 0 ? 'warning.light' : 'background.paper' }}
+                      onClick={() => navigate(`/zawodnicy/${t.id}`)}
+                    >
+                      <Box>
+                        <Typography variant="body1">#{i + 1} {t.imie} {t.nazwisko}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t.ilosc} treningów</Typography>
+                      </Box>
                     </Card>
                   ))}
                 </Box>
@@ -554,14 +558,17 @@ function DashboardPage() {
 
               <Grid item xs={12} md={4}>
                 <Typography variant="h6">Frekwencja meczowa - TOP 3 (minuty)</Typography>
-                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <Box sx={{ mt: 1 }}>
                   {(stats.topMinuty || []).map((t, i) => (
-                    <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
-                      <CardContent>
-                        <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
-                        <Typography variant="body2">{t.minuty} minut</Typography>
-                        <Typography variant="caption">MP: {t.mp} • MR: {t.mr} • MN: {t.mn}</Typography>
-                      </CardContent>
+                    <Card
+                      key={t.id}
+                      sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, mb: 1, cursor: 'pointer', bgcolor: i === 0 ? 'warning.light' : 'background.paper' }}
+                      onClick={() => navigate(`/zawodnicy/${t.id}`)}
+                    >
+                      <Box>
+                        <Typography variant="body1">#{i + 1} {t.imie} {t.nazwisko}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t.minuty} minut • MP: {t.mp} • MR: {t.mr} • MN: {t.mn}</Typography>
+                      </Box>
                     </Card>
                   ))}
                 </Box>

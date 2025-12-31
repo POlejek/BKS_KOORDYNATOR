@@ -383,17 +383,17 @@ function PlanSzkoleniowy() {
                           if (plan) {
                             if (kategoria.field === 'data') {
                               content = (
-                                <Box>
-                                  <Typography variant="caption" fontWeight="bold">
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, width: '100%' }}>
+                                  <Typography variant="caption" fontWeight="bold" sx={{ textAlign: 'center' }}>
                                     {format(day, 'd MMM', { locale: pl })}
                                   </Typography>
                                   <Chip 
                                     label={plan.typWydarzenia === 'mecz' ? 'MECZ' : `T${plan.numerTreningWTygodniu}`}
                                     size="small"
                                     color={plan.typWydarzenia === 'mecz' ? 'secondary' : 'primary'}
-                                    sx={{ fontSize: '0.7rem', mt: 0.5, width: '100%' }}
+                                    sx={{ fontSize: '0.7rem', width: '100%' }}
                                   />
-                                  <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, justifyContent: 'center' }}>
+                                  <Box sx={{ display: 'flex', gap: 0.3, justifyContent: 'center' }}>
                                     <IconButton 
                                       size="small" 
                                       onClick={() => handleOpenDialog(plan)}
