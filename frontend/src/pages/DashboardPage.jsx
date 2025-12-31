@@ -312,10 +312,10 @@ function DashboardPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 } }}>
         <Typography variant="h4">Dashboard - Statystyki</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, width: { xs: '100%', sm: 'auto' } }}>
+          <FormControl sx={{ minWidth: 200, width: { xs: '100%', sm: 'auto' } }}>
             <InputLabel>Drużyna</InputLabel>
             <Select
               value={selectedDruzyna}
@@ -329,7 +329,7 @@ function DashboardPage() {
               ))}
             </Select>
           </FormControl>
-          <FormControl sx={{ minWidth: 150 }}>
+          <FormControl sx={{ minWidth: 150, width: { xs: '100%', sm: 'auto' } }}>
             <InputLabel>Start miesiąc</InputLabel>
             <Select
               value={format(selectedStartMonth, 'yyyy-MM')}
@@ -343,7 +343,7 @@ function DashboardPage() {
               ))}
             </Select>
           </FormControl>
-          <FormControl sx={{ minWidth: 150 }}>
+          <FormControl sx={{ minWidth: 150, width: { xs: '100%', sm: 'auto' } }}>
             <InputLabel>End miesiąc</InputLabel>
             <Select
               value={format(selectedEndMonth, 'yyyy-MM')}

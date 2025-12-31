@@ -329,16 +329,16 @@ function PlanSzkoleniowy() {
       </Box>
 
       {selectedDruzyna && (
-        <TableContainer component={Paper}>
-          <Table size="small">
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 'max-content' }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 180, bgcolor: 'grey.200', fontWeight: 'bold' }}>
+                <TableCell sx={{ width: 180, bgcolor: 'grey.200', fontWeight: 'bold', fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                   Kategoria
                 </TableCell>
                 {['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'].map((day, idx) => (
-                  <TableCell key={day} align="center" sx={{ minWidth: 150, bgcolor: 'primary.light', color: 'white' }}>
-                    {day}
+                  <TableCell key={day} align="center" sx={{ minWidth: { xs: 80, sm: 150 }, bgcolor: 'primary.light', color: 'white', fontSize: { xs: '0.65rem', sm: '0.875rem' } }}>
+                    {day.slice(0, 3)}
                   </TableCell>
                 ))}
               </TableRow>
@@ -364,14 +364,14 @@ function PlanSzkoleniowy() {
                   <React.Fragment key={weekIdx}>
                     {/* Nagłówek tygodnia */}
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ bgcolor: 'grey.300', fontWeight: 'bold', py: 1 }}>
+                      <TableCell colSpan={8} sx={{ bgcolor: 'grey.300', fontWeight: 'bold', py: 1, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}>
                         Tydzień {week.weekNumber} ({format(week.start, 'dd.MM', { locale: pl })} - {format(week.end, 'dd.MM', { locale: pl })})
                       </TableCell>
                     </TableRow>
                     
                     {kategorieWiersze.map((kategoria, katIdx) => (
                       <TableRow key={`${weekIdx}-${katIdx}`}>
-                        <TableCell sx={{ bgcolor: kategoria.color, fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        <TableCell sx={{ bgcolor: kategoria.color, fontWeight: 'bold', fontSize: { xs: '0.65rem', sm: '0.85rem' } }}>
                           {kategoria.label}
                         </TableCell>
                         {week.days.map((day, dayIdx) => {
@@ -448,10 +448,11 @@ function PlanSzkoleniowy() {
                               sx={{ 
                                 bgcolor: !isCurrentMonth ? 'grey.100' : (plan ? 'white' : 'grey.50'),
                                 verticalAlign: 'top',
-                                p: 1,
-                                fontSize: '0.8rem',
+                                p: { xs: 0.5, sm: 1 },
+                                fontSize: { xs: '0.65rem', sm: '0.8rem' },
                                 border: '1px solid',
-                                borderColor: 'grey.300'
+                                borderColor: 'grey.300',
+                                wordBreak: 'break-word'
                               }}
                             >
                               {content}
