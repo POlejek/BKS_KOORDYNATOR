@@ -569,7 +569,7 @@ function DashboardPage() {
             </Grid>
 
             {/* Tabela wszystkich graczy */}
-            <TableContainer>
+            <TableContainer sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>

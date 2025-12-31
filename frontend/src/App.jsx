@@ -12,8 +12,12 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  ListItemButton
+  ListItemButton,
+  IconButton,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import {
   People as PeopleIcon,
   CalendarMonth as CalendarIcon,
@@ -37,6 +41,9 @@ import PlayerPage from './pages/PlayerPage';
 function App() {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Drużyny', icon: <GroupsIcon />, path: '/druzyny' },
@@ -55,19 +62,40 @@ function App() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               BKS Koordynator
             </Typography>
-            {menuItems.map((item) => (
-              <Button 
-                key={item.path}
-                color="inherit" 
-                component={Link} 
-                to={item.path}
-                startIcon={item.icon}
-              >
-                {item.text}
-              </Button>
-            ))}
+            {isSmall ? (
+              <IconButton color="inherit" edge="end" onClick={() => setDrawerOpen(true)} aria-label="menu">
+                <MenuIcon />
+              </IconButton>
+            ) : (
+              menuItems.map((item) => (
+                <Button 
+                  key={item.path}
+                  color="inherit" 
+                  component={Link} 
+                  to={item.path}
+                  startIcon={item.icon}
+                >
+                  {item.text}
+                </Button>
+              ))
+            )}
           </Toolbar>
         </AppBar>
+
+        <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+          <Box sx={{ width: 250 }} role="presentation" onClick={() => setDrawerOpen(false)}>
+            <List>
+              {menuItems.map((item) => (
+                <ListItem key={item.path} disablePadding>
+                  <ListItemButton component={Link} to={item.path}>
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </Drawer>
 
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flex: 1 }}>
           <Routes>
