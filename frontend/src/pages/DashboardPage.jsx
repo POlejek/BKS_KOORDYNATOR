@@ -127,10 +127,11 @@ function DashboardPage() {
       const fazyGry = {};
       const dnaTechniki = {};
       const celeMentalne = {};
+      const celeMotoryczne = {};
 
       treningi.forEach(t => {
         if (t.dominujacaFazaGry) {
-          fazyGry[t.dominujacaFazaGry] = (fazyGry[t.dominujacaFazyGry] || 0) + 1;
+          fazyGry[t.dominujacaFazaGry] = (fazyGry[t.dominujacaFazaGry] || 0) + 1;
         }
         t.dnaTechniki?.forEach(dna => {
           if (dna) dnaTechniki[dna] = (dnaTechniki[dna] || 0) + 1;
