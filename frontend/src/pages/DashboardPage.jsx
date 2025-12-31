@@ -50,7 +50,8 @@ function DashboardPage() {
       mecze: 0,
       fazyGry: {},
       dnaTechniki: {},
-      celeMentalne: {}
+      celeMentalne: {},
+      celeMotoryczne: {}
     },
     gracze: []
   });
@@ -129,13 +130,16 @@ function DashboardPage() {
 
       treningi.forEach(t => {
         if (t.dominujacaFazaGry) {
-          fazyGry[t.dominujacaFazaGry] = (fazyGry[t.dominujacaFazaGry] || 0) + 1;
+          fazyGry[t.dominujacaFazaGry] = (fazyGry[t.dominujacaFazyGry] || 0) + 1;
         }
         t.dnaTechniki?.forEach(dna => {
           if (dna) dnaTechniki[dna] = (dnaTechniki[dna] || 0) + 1;
         });
         t.celMentalny?.forEach(cel => {
           if (cel) celeMentalne[cel] = (celeMentalne[cel] || 0) + 1;
+        });
+        t.celMotoryczny?.forEach(c => {
+          if (c) celeMotoryczne[c] = (celeMotoryczne[c] || 0) + 1;
         });
       });
 
@@ -144,7 +148,7 @@ function DashboardPage() {
         const kontroleZawodnika = kontroleRes.data.flatMap(k => 
           (k.statystykiZawodnikow || []).filter(s => 
             (s.zawodnikId._id || s.zawodnikId) === zawodnik._id
-          )
+          ).map(s => ({ ...s, dataMeczu: k.dataMeczu || k.data }))
         );
 
         const meczeRozegrane = kontroleZawodnika.filter(s => s.status === 'MP' || s.status === 'MR').length;
@@ -152,6 +156,11 @@ function DashboardPage() {
         const sumaAsyst = kontroleZawodnika.reduce((sum, s) => sum + (s.ileAsyst || 0), 0);
         const sumaMinut = kontroleZawodnika.reduce((sum, s) => sum + (s.ileMinut || 0), 0);
         const sredniaMinut = meczeRozegrane > 0 ? Math.round(sumaMinut / meczeRozegrane) : 0;
+
+        // policz MP/MR/MN z kontroli meczowej
+        const mpCount = kontroleZawodnika.filter(s => s.status === 'MP').length;
+        const mrCount = kontroleZawodnika.filter(s => s.status === 'MR').length;
+        const mnCount = kontroleZawodnika.filter(s => s.status === 'MN' || s.status === 'nieobecny').length;
 
         // Frekwencja - pobierz wszystkie obecności zawodnika
         const obecnosciZawodnika = (obecnosciRes.data || [])
@@ -165,27 +174,19 @@ function DashboardPage() {
         // Rozdziel obecności na treningi i mecze (uwzględnij brak wpisu jako nieobecny - MN)
         const obecnosciNaTreningach = [];
 
-        // Map of obecnosci by date
+        // Map obecnosci treningowe (nie meczowe)
         const obecnosciByDate = {};
         obecnosciZawodnika.forEach(o => {
           const dataStr = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
           if (!obecnosciByDate[dataStr]) obecnosciByDate[dataStr] = [];
           obecnosciByDate[dataStr].push(o.status);
-          // Separate training presences
           const isMatch = datyMeczy.includes(dataStr);
           if (!isMatch) obecnosciNaTreningach.push(o);
         });
 
-        // For each match date, collect statuses from obecnosci and kontrola
+        // Dla meczów korzystamy wyłącznie z Kontrola Meczowa
         const obecnosciNaMeczach = datyMeczy.map(dateStr => {
           const statuses = [];
-
-          // obecnosci entries
-          if (obecnosciByDate[dateStr]) {
-            statuses.push(...obecnosciByDate[dateStr]);
-          }
-
-          // kontrola entries for that date and this player
           kontroleRes.data.forEach(k => {
             const kDate = format(new Date(k.dataMeczu || k.data), 'yyyy-MM-dd');
             if (kDate === dateStr) {
@@ -195,7 +196,6 @@ function DashboardPage() {
               });
             }
           });
-
           return { date: dateStr, statuses };
         });
         
@@ -203,9 +203,8 @@ function DashboardPage() {
           ? Math.round((obecnosciNaTreningach.filter(o => o.status === 'obecny').length / obecnosciNaTreningach.length) * 100)
           : 0;
 
-        // Dla meczów traktujemy jako obecne te daty, gdzie istnieje wpis 'obecny' lub kontrola MP/MR
-        const obecnosciMeczeObecne = obecnosciNaMeczach.map(m => m.statuses.some(s => s === 'obecny' || s === 'MP' || s === 'MR'));
-        // liczba meczów powinna być liczbą meczów z planu, nie tylko tych z wpisami obecnosci
+        // Dla meczów: frekwencję liczmy na podstawie kontroli meczowej
+        const obecnosciMeczeObecne = obecnosciNaMeczach.map(m => m.statuses.some(s => s === 'MP' || s === 'MR'));
         const liczbaMeczy = datyMeczy.length;
         const frekwencjaMecze = liczbaMeczy > 0
           ? Math.round((obecnosciMeczeObecne.filter(Boolean).length / liczbaMeczy) * 100)
@@ -224,8 +223,11 @@ function DashboardPage() {
           frekwencjaMecze,
           obecnosciTreningiLiczba: obecnosciNaTreningach.filter(o => o.status === 'obecny').length,
           obecnosciTreningiMax: obecnosciNaTreningach.length,
-          obecnosciMeczeLiczba: obecnosciNaMeczach.reduce((sum, m) => sum + (m.statuses.some(s => s === 'obecny' || s === 'MP' || s === 'MR') ? 1 : 0), 0),
+          obecnosciMeczeLiczba: obecnosciNaMeczach.reduce((sum, m) => sum + (m.statuses.some(s => s === 'MP' || s === 'MR') ? 1 : 0), 0),
           obecnosciMeczeMax: obecnosciNaMeczach.length,
+          mpCount,
+          mrCount,
+          mnCount,
           punkty: sumaBramek + sumaAsyst // Punkty: bramki + asysty
         };
       });
@@ -239,16 +241,23 @@ function DashboardPage() {
         .slice(0, 3)
         .map(g => ({ id: g.id, imie: g.imie, nazwisko: g.nazwisko, ilosc: g.obecnosciTreningiLiczba }));
 
+      const topMinuty = [...graczStats]
+        .sort((a, b) => b.sumaMinut - a.sumaMinut)
+        .slice(0, 3)
+        .map(g => ({ id: g.id, imie: g.imie, nazwisko: g.nazwisko, minuty: g.sumaMinut, mp: g.mpCount || 0, mr: g.mrCount || 0, mn: g.mnCount || 0 }));
+
       setStats({
         treningi: {
           total: treningi.length,
           mecze: mecze.length,
           fazyGry,
           dnaTechniki,
-          celeMentalne
+          celeMentalne,
+          celeMotoryczne
         },
         gracze: graczStats,
-        topTreningi
+        topTreningi,
+        topMinuty
       });
     } catch (error) {
       console.error('Błąd ładowania statystyk:', error);
@@ -396,7 +405,7 @@ function DashboardPage() {
         </Grid>
 
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Typography variant="h6" gutterBottom>
               Dominujące Fazy Gry
             </Typography>
@@ -409,7 +418,7 @@ function DashboardPage() {
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={(count / stats.treningi.total) * 100}
+                    value={stats.treningi.total ? (count / stats.treningi.total) * 100 : 0}
                     sx={{ height: 8, borderRadius: 1 }}
                   />
                 </Box>
@@ -422,46 +431,74 @@ function DashboardPage() {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Typography variant="h6" gutterBottom>
-              DNA Techniki (TOP 5)
+              DNA Techniki
             </Typography>
             <Box>
               {getTopItems(stats.treningi.dnaTechniki).map(([tech, count]) => (
-                <Chip
-                  key={tech}
-                  label={`${tech} (${count})`}
-                  sx={{ m: 0.5 }}
-                  color="primary"
-                  variant="outlined"
-                />
+                <Box key={tech} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">{tech}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{count}x</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={stats.treningi.total ? (count / stats.treningi.total) * 100 : 0}
+                    sx={{ height: 8, borderRadius: 1 }}
+                  />
+                </Box>
               ))}
               {Object.keys(stats.treningi.dnaTechniki).length === 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  Brak danych
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Brak danych</Typography>
               )}
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Typography variant="h6" gutterBottom>
-              Cele Mentalne (TOP 5)
+              Cele Mentalne
             </Typography>
             <Box>
               {getTopItems(stats.treningi.celeMentalne).map(([cel, count]) => (
-                <Chip
-                  key={cel}
-                  label={`${cel} (${count})`}
-                  sx={{ m: 0.5 }}
-                  color="secondary"
-                  variant="outlined"
-                />
+                <Box key={cel} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">{cel}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{count}x</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={stats.treningi.total ? (count / stats.treningi.total) * 100 : 0}
+                    sx={{ height: 8, borderRadius: 1 }}
+                  />
+                </Box>
               ))}
               {Object.keys(stats.treningi.celeMentalne).length === 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  Brak danych
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Brak danych</Typography>
+              )}
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Typography variant="h6" gutterBottom>
+              Cele Motoryczne
+            </Typography>
+            <Box>
+              {getTopItems(stats.treningi.celeMotoryczne).map(([cel, count]) => (
+                <Box key={cel} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2">{cel}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{count}x</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={stats.treningi.total ? (count / stats.treningi.total) * 100 : 0}
+                    sx={{ height: 8, borderRadius: 1 }}
+                  />
+                </Box>
+              ))}
+              {Object.keys(stats.treningi.celeMotoryczne).length === 0 && (
+                <Typography variant="body2" color="text.secondary">Brak danych</Typography>
               )}
             </Box>
           </Grid>
@@ -476,54 +513,50 @@ function DashboardPage() {
 
         {stats.gracze.length > 0 ? (
           <>
-            {/* TOP3 obecności na treningach (ilość treningów) */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">TOP 3 obecności na treningach</Typography>
-              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                {(stats.topTreningi || []).map((t, i) => (
-                  <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
-                    <CardContent>
-                      <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
-                      <Typography variant="body2">{t.ilosc} treningów</Typography>
-                    </CardContent>
-                  </Card>
-                ))}
-                {(!stats.topTreningi || stats.topTreningi.length === 0) && (
-                  <Typography variant="body2" color="text.secondary">Brak danych</Typography>
-                )}
-              </Box>
-            </Box>
-            {/* TOP 3 Gracze */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              {stats.gracze.slice(0, 3).map((gracz, index) => (
-                <Grid item xs={12} md={4} key={gracz.id}>
-                  <Card
-                    sx={{
-                      bgcolor: index === 0 ? 'warning.light' : index === 1 ? 'grey.300' : 'error.light',
-                      color: index === 0 ? 'warning.contrastText' : 'text.primary'
-                    }}
-                  >
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="h3" fontWeight="bold">
-                          #{index + 1}
-                        </Typography>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6">
-                            <Link to={`/zawodnicy/${gracz.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{gracz.imie} {gracz.nazwisko}</Link>
-                          </Typography>
-                          <Typography variant="body2">
-                            {gracz.sumaBramek} bramek • {gracz.sumaAsyst} asyst
-                          </Typography>
-                          <Typography variant="caption">
-                            {gracz.punkty} punktów • {gracz.meczeRozegrane} meczów
-                          </Typography>
-                        </Box>
+              <Grid item xs={12} md={4}>
+                <Typography variant="h6">Skuteczność</Typography>
+                <Box sx={{ mt: 1 }}>
+                  {(stats.gracze || []).slice(0, 5).map((g, i) => (
+                    <Box key={g.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
+                      <Box>
+                        <Typography variant="body2"><Link to={`/zawodnicy/${g.id}`} style={{ textDecoration: 'none' }}>{g.imie} {g.nazwisko}</Link></Typography>
+                        <Typography variant="caption" color="text.secondary">{g.sumaBramek} br. • {g.sumaAsyst} ast</Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
+                      <Typography variant="body1" fontWeight="bold">{g.punkty}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Typography variant="h6">Frekwencja (treningi) - TOP 3</Typography>
+                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                  {(stats.topTreningi || []).map((t, i) => (
+                    <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
+                      <CardContent>
+                        <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
+                        <Typography variant="body2">{t.ilosc} treningów</Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Typography variant="h6">Frekwencja meczowa - TOP 3 (minuty)</Typography>
+                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                  {(stats.topMinuty || []).map((t, i) => (
+                    <Card key={t.id} sx={{ flex: 1, bgcolor: i === 0 ? 'warning.light' : i === 1 ? 'grey.300' : 'info.light', color: i === 0 ? 'warning.contrastText' : 'text.primary' }}>
+                      <CardContent>
+                        <Typography variant="h6">#{i + 1} <Link to={`/zawodnicy/${t.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{t.imie} {t.nazwisko}</Link></Typography>
+                        <Typography variant="body2">{t.minuty} minut</Typography>
+                        <Typography variant="caption">MP: {t.mp} • MR: {t.mr} • MN: {t.mn}</Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              </Grid>
             </Grid>
 
             {/* Tabela wszystkich graczy */}

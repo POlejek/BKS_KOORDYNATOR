@@ -12,7 +12,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { zawodnicyService, planySzkolenioweService, obecnosciService } from '../services';
+import { zawodnicyService, planySzkolenioweService, obecnosciService, kontroleMeczoweService } from '../services';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -45,9 +45,10 @@ function PlayerPage() {
       const dataOd = format(startOfMonth(startMonth), 'yyyy-MM-dd');
       const dataDo = format(endOfMonth(endMonth), 'yyyy-MM-dd');
 
-      const [planyRes, obecnosciRes] = await Promise.all([
+      const [planyRes, obecnosciRes, kontroleRes] = await Promise.all([
         planySzkolenioweService.getByDruzyna(zawodnik.druzyna._id || zawodnik.druzyna, { dataOd, dataDo }),
-        obecnosciService.getByZawodnik(id, { dataOd, dataDo }).catch(() => ({ data: [] }))
+        obecnosciService.getByZawodnik(id, { dataOd, dataDo }).catch(() => ({ data: [] })),
+        kontroleMeczoweService.getByPeriod(zawodnik.druzyna._id || zawodnik.druzyna, dataOd, dataDo).catch(() => ({ data: [] }))
       ]);
 
       // map plans by date
@@ -78,7 +79,39 @@ function PlayerPage() {
         }
       });
 
-      setStats({ treningi: treningi.length, fazyGry, dna, celeMentalne, celeMotoryczne });
+      // Statystyki meczowe (z Kontrola Meczowa)
+      let mp = 0, mr = 0, mn = 0, minutes = 0, goals = 0, assists = 0;
+      // liczba meczów w okresie (na podstawie kontroli)
+      const meczeDates = [...new Set((kontroleRes.data || []).map(k => format(new Date(k.dataMeczu || k.data), 'yyyy-MM-dd')))];
+
+      (kontroleRes.data || []).forEach(k => {
+        (k.statystykiZawodnikow || []).forEach(s => {
+          const sid = (s.zawodnikId && (s.zawodnikId._id || s.zawodnikId));
+          if (sid === id) {
+            if (s.status === 'MP') mp += 1;
+            if (s.status === 'MR') mr += 1;
+            if (s.status === 'MN' || s.status === 'nieobecny') mn += 1;
+            minutes += s.ileMinut || 0;
+            goals += s.ileBramek || 0;
+            assists += s.ileAsyst || 0;
+          }
+        });
+      });
+
+      const liczbaMeczy = meczeDates.length;
+      const frekwencjaMecze = liczbaMeczy > 0 ? Math.round(((mp + mr) / liczbaMeczy) * 100) : 0;
+
+      // Frekwencja treningowa: policz ile treningów w planach i ile obecnosci z status 'obecny' na tych datach
+      const treningiPlany = planyRes.data.filter(p => p.typWydarzenia === 'trening');
+      const treningiDates = treningiPlany.map(p => format(new Date(p.dataTreningu), 'yyyy-MM-dd'));
+      const obecnosciTreningowe = (obecnosciRes.data || []).filter(o => {
+        const d = format(new Date(o.dataTreningu), 'yyyy-MM-dd');
+        return treningiDates.includes(d);
+      });
+      const obecnyNaTreningach = obecnosciTreningowe.filter(o => o.status === 'obecny').length;
+      const frekwencjaTreningi = treningiDates.length > 0 ? Math.round((obecnyNaTreningach / treningiDates.length) * 100) : 0;
+
+      setStats({ treningi: treningi.length, fazyGry, dna, celeMentalne, celeMotoryczne, mp, mr, mn, minutes, goals, assists, frekwencjaTreningi, frekwencjaMecze, liczbaMeczy });
     } catch (err) {
       console.error('Błąd ładowania statystyk zawodnika:', err);
     }
@@ -136,6 +169,19 @@ function PlayerPage() {
               <Typography variant="h6">Statystyki (w wybranym okresie)</Typography>
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body1">Ilość odbytych treningów: <strong>{stats.treningi}</strong></Typography>
+
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2">Mecze i statystyki meczowe</Typography>
+                  <Typography variant="body2">Liczba meczów w okresie: <strong>{stats.liczbaMeczy || 0}</strong></Typography>
+                  <Typography variant="body2">MP: <strong>{stats.mp || 0}</strong> • MR: <strong>{stats.mr || 0}</strong> • MN: <strong>{stats.mn || 0}</strong></Typography>
+                  <Typography variant="body2">Minuty: <strong>{stats.minutes || 0}</strong> • Bramki: <strong>{stats.goals || 0}</strong> • Asysty: <strong>{stats.assists || 0}</strong></Typography>
+                  <Typography variant="body2">% frekwencji meczowej: <strong>{stats.frekwencjaMecze || 0}%</strong></Typography>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2">Frekwencja treningowa</Typography>
+                  <Typography variant="body2">% frekwencji treningowej: <strong>{stats.frekwencjaTreningi || 0}%</strong></Typography>
+                </Box>
 
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2">Dominujące fazy gry</Typography>
