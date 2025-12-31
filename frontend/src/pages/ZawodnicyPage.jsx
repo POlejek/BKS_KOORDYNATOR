@@ -481,7 +481,7 @@ function ZawodnicyPage() {
                     cursor: 'pointer',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }}
-                  onClick={() => window.open(api.defaults.baseURL + dok.sciezkaPliku.replace(/^\//, ''), '_blank')}
+                  onClick={() => window.open(makeDownloadUrl(dok.sciezkaPliku), '_blank')}
                 >
                   <AttachFile color="primary" />
                   <Box sx={{ flex: 1 }}>
