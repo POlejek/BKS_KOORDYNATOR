@@ -32,6 +32,7 @@ import { druzynyService, zawodnicyService, kontroleMeczoweService, planySzkoleni
 import { Link, useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import AlertyBadan from '../components/AlertyBadan';
 
 function DashboardPage() {
   const [druzyny, setDruzyny] = useState([]);
@@ -312,6 +313,7 @@ function DashboardPage() {
 
   return (
     <Box sx={{ p: 3 }}>
+      <AlertyBadan dni={30} />
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 } }}>
         <Typography variant="h4">Dashboard - Statystyki</Typography>
         <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, width: { xs: '100%', sm: 'auto' } }}>

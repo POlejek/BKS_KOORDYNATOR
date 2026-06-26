@@ -48,6 +48,10 @@ const zawodnikSchema = new mongoose.Schema({
       required: true
     },
     nazwa: String,
+    // Identyfikator pliku w GridFS (pliki przechowywane w MongoDB, nie na dysku)
+    fileId: mongoose.Schema.Types.ObjectId,
+    contentType: String,
+    // Zachowane dla wstecznej kompatybilności ze starymi rekordami
     sciezkaPliku: String,
     dataZaladowania: {
       type: Date,
