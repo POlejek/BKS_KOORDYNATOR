@@ -1,56 +1,83 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+const connectDB = require('./config/db');
+const { requireAuth } = require('./middleware/auth');
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
-}));
+// Bezpieczne nagłówki HTTP
+app.use(helmet());
+
+// CORS – allowlista z FRONTEND_URL (oddzielone przecinkami). Brak '*'.
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Brak origin (np. narzędzia serwerowe, healthcheck) – przepuść
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Niedozwolone źródło CORS'));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Statyczne pliki (dla uploadowanych dokumentów)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Globalny limiter zapytań
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
-// Połączenie z MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bks_koordynator')
-.then(() => console.log('Połączono z MongoDB'))
-.catch((err) => console.error('Błąd połączenia z MongoDB:', err));
+// Trasy publiczne
+app.use('/api/auth', require('./routes/auth'));
 
-// Trasy API
-app.use('/api/zawodnicy', require('./routes/zawodnicy'));
-app.use('/api/druzyny', require('./routes/druzyny'));
-app.use('/api/obecnosci', require('./routes/obecnosci'));
-app.use('/api/plany-szkoleniowe', require('./routes/planySzkoleniowe'));
-app.use('/api/ustawienia', require('./routes/ustawienia'));
-app.use('/api/kontrole-meczowe', require('./routes/kontroleMeczowe'));
+// Trasy API – wszystkie wymagają zalogowania
+app.use('/api/zawodnicy', requireAuth, require('./routes/zawodnicy'));
+app.use('/api/druzyny', requireAuth, require('./routes/druzyny'));
+app.use('/api/obecnosci', requireAuth, require('./routes/obecnosci'));
+app.use('/api/plany-szkoleniowe', requireAuth, require('./routes/planySzkoleniowe'));
+app.use('/api/ustawienia', requireAuth, require('./routes/ustawienia'));
+app.use('/api/kontrole-meczowe', requireAuth, require('./routes/kontroleMeczowe'));
 
-// Podstawowa trasa
+// Podstawowa trasa / healthcheck
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'BKS Koordynator API',
-    version: '1.0.0'
-  });
+  res.json({ message: 'BKS Koordynator API', version: '1.0.0' });
 });
 
-// Obsługa błędów
+// Obsługa błędów – nie ujawniaj szczegółów klientowi
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Wystąpił błąd serwera',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  console.error(err.stack || err.message);
+  if (err.message === 'Niedozwolone źródło CORS') {
+    return res.status(403).json({ message: 'Niedozwolone źródło CORS' });
+  }
+  res.status(err.status || 500).json({ message: 'Wystąpił błąd serwera' });
 });
 
-// Start serwera
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Serwer działa na porcie ${PORT}`);
-});
+// Start serwera tylko gdy plik uruchomiony bezpośrednio (nie w testach)
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => console.log(`Serwer działa na porcie ${PORT}`));
+    })
+    .catch((err) => console.error('Błąd połączenia z MongoDB:', err));
+}
 
 module.exports = app;

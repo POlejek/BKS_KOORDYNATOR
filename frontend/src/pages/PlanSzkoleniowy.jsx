@@ -523,9 +523,10 @@ function PlanSzkoleniowy() {
                 <TextField {...params} label="DNA Techniki (max 6)" />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip label={option} {...getTagProps({ index })} />
-                ))
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return <Chip key={key} label={option} {...tagProps} />;
+                })
               }
             />
 
@@ -538,9 +539,10 @@ function PlanSzkoleniowy() {
                 <TextField {...params} label="CEL Motoryczny" />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip label={option} {...getTagProps({ index })} />
-                ))
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return <Chip key={key} label={option} {...tagProps} />;
+                })
               }
             />
 
@@ -553,9 +555,10 @@ function PlanSzkoleniowy() {
                 <TextField {...params} label="CEL Mentalny" />
               )}
               renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip label={option} {...getTagProps({ index })} />
-                ))
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return <Chip key={key} label={option} {...tagProps} />;
+                })
               }
             />
 

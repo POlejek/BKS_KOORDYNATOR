@@ -22,15 +22,17 @@ import {
   IconButton,
   Chip
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, AttachFile } from '@mui/icons-material';
-import { zawodnicyService, druzynyService } from '../services';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, AttachFile, Download as DownloadIcon } from '@mui/icons-material';
+import { zawodnicyService } from '../services';
 import { Link } from 'react-router-dom';
-import api from '../services/api';
 import { format } from 'date-fns';
+import { useAppContext } from '../context/AppContext';
+import { useToast } from '../components/Toast';
 
 function ZawodnicyPage() {
+  const { druzyny } = useAppContext();
+  const toast = useToast();
   const [zawodnicy, setZawodnicy] = useState([]);
-  const [druzyny, setDruzyny] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingZawodnik, setEditingZawodnik] = useState(null);
   const [selectedDruzyna, setSelectedDruzyna] = useState('');
@@ -54,21 +56,8 @@ function ZawodnicyPage() {
   const [selectedZawodnikDocs, setSelectedZawodnikDocs] = useState(null);
 
   useEffect(() => {
-    loadDruzyny();
     loadZawodnicy();
   }, []);
-
-  const loadDruzyny = async () => {
-    try {
-      const response = await druzynyService.getAll();
-      setDruzyny(response.data);
-      if (response.data.length > 0 && !selectedDruzyna) {
-        setSelectedDruzyna(response.data[0]._id);
-      }
-    } catch (error) {
-      console.error('Błąd ładowania drużyn:', error);
-    }
-  };
 
   const loadZawodnicy = async (druzynaId = null) => {
     try {
@@ -143,9 +132,10 @@ function ZawodnicyPage() {
       }
       handleCloseDialog();
       loadZawodnicy(selectedDruzyna || null);
+      toast.success('Zapisano zawodnika');
     } catch (error) {
       console.error('Błąd zapisywania zawodnika:', error);
-      alert(error.response?.data?.message || 'Błąd zapisywania zawodnika');
+      toast.error(error.response?.data?.message || 'Błąd zapisywania zawodnika');
     }
   };
 
@@ -156,7 +146,7 @@ function ZawodnicyPage() {
   const handleUploadDokument = async () => {
     if (!editingZawodnik) return;
     if (!plik) {
-      alert('Wybierz plik do przesłania');
+      toast.warning('Wybierz plik do przesłania');
       return;
     }
 
@@ -171,9 +161,10 @@ function ZawodnicyPage() {
       loadZawodnicy(selectedDruzyna || null);
       setPlik(null);
       setDokumentTyp('badania_lekarskie');
+      toast.success('Przesłano dokument');
     } catch (err) {
       console.error('Błąd uploadu:', err);
-      alert('Błąd przesyłania pliku');
+      toast.error('Błąd przesyłania pliku');
     }
   };
 
@@ -185,22 +176,47 @@ function ZawodnicyPage() {
       const resp = await zawodnicyService.getById(editingZawodnik._id);
       setEditingZawodnik(resp.data);
       loadZawodnicy(selectedDruzyna || null);
+      toast.success('Usunięto dokument');
     } catch (err) {
       console.error('Błąd usuwania dokumentu:', err);
-      alert('Błąd usuwania dokumentu');
+      toast.error('Błąd usuwania dokumentu');
     }
   };
 
-  const makeDownloadUrl = (sciezkaPliku) => {
-    if (!sciezkaPliku) return '#';
-    let base = api.defaults.baseURL || '';
-    // Usunięcie '/api' z końca baseURL jeśli istnieje
-    if (base.endsWith('/api')) {
-      base = base.slice(0, -4);
+  // Pobiera dokument przez autoryzowane API (pliki są w GridFS za auth) i otwiera/zapisuje
+  const handleDownloadDokument = async (zawodnikId, dokumentId, nazwa) => {
+    try {
+      const res = await zawodnicyService.pobierzDokument(zawodnikId, dokumentId);
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      if (nazwa) a.download = nazwa;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Błąd pobierania dokumentu:', err);
+      toast.error('Nie udało się pobrać dokumentu');
     }
-    // Upewnij się że ścieżka pliku zaczyna się od '/'
-    const path = sciezkaPliku.startsWith('/') ? sciezkaPliku : `/${sciezkaPliku}`;
-    return `${base}${path}`;
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      const res = await zawodnicyService.exportCsv();
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'zawodnicy.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Błąd eksportu CSV:', err);
+      toast.error('Nie udało się wyeksportować CSV');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -238,6 +254,13 @@ function ZawodnicyPage() {
               ))}
             </Select>
           </FormControl>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportCsv}
+          >
+            Eksport CSV
+          </Button>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -433,7 +456,7 @@ function ZawodnicyPage() {
                   <Box key={dok._id || dok.dataZaladowania} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip label={dok.typ === 'badania_lekarskie' ? 'Badania' : dok.typ === 'deklaracja_gry_amatora' ? 'DGA' : 'Inne'} size="small" />
                     <Typography sx={{ flex: 1 }}>{dok.nazwa}</Typography>
-                    <Button size="small" onClick={() => window.open(makeDownloadUrl(dok.sciezkaPliku), '_blank')}>Pobierz</Button>
+                    <Button size="small" onClick={() => handleDownloadDokument(editingZawodnik._id, dok._id, dok.nazwa)}>Pobierz</Button>
                     <Button size="small" color="error" onClick={() => handleDeleteDokument(dok._id)}>Usuń</Button>
                   </Box>
                 ))}
@@ -487,7 +510,7 @@ function ZawodnicyPage() {
                     cursor: 'pointer',
                     '&:hover': { bgcolor: '#f5f5f5' }
                   }}
-                  onClick={() => window.open(makeDownloadUrl(dok.sciezkaPliku), '_blank')}
+                  onClick={() => handleDownloadDokument(selectedZawodnikDocs._id, dok._id, dok.nazwa)}
                 >
                   <AttachFile color="primary" />
                   <Box sx={{ flex: 1 }}>

@@ -19,6 +19,11 @@ export const zawodnicyService = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteDokument: (id, dokumentId) => api.delete(`/zawodnicy/${id}/dokumenty/${dokumentId}`),
+  // Pobiera dokument jako blob (przez autoryzowane API – pliki są w GridFS za auth)
+  pobierzDokument: (id, dokumentId) =>
+    api.get(`/zawodnicy/${id}/dokumenty/${dokumentId}/plik`, { responseType: 'blob' }),
+  getWygasajaceBadania: (dni = 30) => api.get('/zawodnicy/alerty/badania', { params: { dni } }),
+  exportCsv: () => api.get('/zawodnicy/export/csv', { responseType: 'blob' }),
 };
 
 export const obecnosciService = {

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const kontrolaMeczowaController = require('../controllers/kontrolaMeczowaController');
+const { requireRole } = require('../middleware/auth');
+
+const moznaEdytowac = requireRole('admin', 'koordynator', 'trener');
 
 // Pobierz wszystkie kontrole meczowe (z opcjonalnym filtrem po drużynie)
 router.get('/', kontrolaMeczowaController.getAllKontroleMeczowe);
@@ -12,12 +15,12 @@ router.get('/by-period', kontrolaMeczowaController.getKontroleMeczoweByDruzynaAn
 router.get('/:id', kontrolaMeczowaController.getKontrolaMeczowa);
 
 // Utwórz nową kontrolę meczową
-router.post('/', kontrolaMeczowaController.createKontrolaMeczowa);
+router.post('/', moznaEdytowac, kontrolaMeczowaController.createKontrolaMeczowa);
 
 // Zaktualizuj kontrolę meczową
-router.put('/:id', kontrolaMeczowaController.updateKontrolaMeczowa);
+router.put('/:id', moznaEdytowac, kontrolaMeczowaController.updateKontrolaMeczowa);
 
 // Usuń kontrolę meczową
-router.delete('/:id', kontrolaMeczowaController.deleteKontrolaMeczowa);
+router.delete('/:id', moznaEdytowac, kontrolaMeczowaController.deleteKontrolaMeczowa);
 
 module.exports = router;
